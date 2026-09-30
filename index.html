@@ -3,131 +3,130 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="머신러닝의 기초부터 생성형 AI와 AI 시스템까지 원리를 연결해서 기록하는 스터디 블로그">
-  <meta name="theme-color" content="#f4f0e8">
-  <title>Bit by Bit — AI를 이해하는 기록</title>
+  <meta name="description" content="내가 공부한 AI 지식을 직접 작성하고 관리하는 브라우저 기반 개인 노트">
+  <meta name="theme-color" content="#f7f7f3">
+  <title>Studybase — 나의 AI 공부 노트</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="site-header">
-    <a class="brand" href="index.html" aria-label="Bit by Bit 홈">
-      <span class="brand-mark" aria-hidden="true">01</span>
-      <span>BIT BY BIT</span>
-    </a>
-    <nav aria-label="주요 메뉴">
-      <a href="#notes">노트</a>
-      <a href="#roadmap">로드맵</a>
-      <a href="#about">소개</a>
-    </nav>
-    <button class="theme-toggle" type="button" aria-label="다크 모드 전환" title="테마 전환">
-      <span aria-hidden="true">◐</span>
-    </button>
-  </header>
-
-  <main>
-    <section class="hero" aria-labelledby="hero-title">
-      <p class="eyebrow">ARTIFICIAL INTELLIGENCE STUDY LOG · 2026</p>
-      <h1 id="hero-title">AI를 외우지 않고,<br><em>끝까지 이해하기.</em></h1>
-      <p class="hero-copy">선형대수의 한 줄부터 거대 언어 모델의 추론까지. AI가 학습하고 판단하는 원리를 작은 질문으로 쪼개고, 다시 하나의 흐름으로 연결합니다.</p>
-      <div class="hero-actions">
-        <a class="button button-primary" href="#notes">최근 노트 읽기 <span>↘</span></a>
-        <a class="text-link" href="#roadmap">학습 로드맵 보기 <span>→</span></a>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-row">
+        <a class="brand" href="index.html" aria-label="Studybase 홈"><span class="brand-mark">S</span><span>STUDYBASE</span></a>
+        <button class="icon-button sidebar-close" id="sidebar-close" type="button" aria-label="메뉴 닫기">×</button>
       </div>
-      <div class="hero-stats" aria-label="블로그 통계">
-        <div><strong>03</strong><span>published notes</span></div>
-        <div><strong>05</strong><span>core topics</span></div>
-        <div><strong>∞</strong><span>questions left</span></div>
+
+      <div class="workspace-card"><span class="workspace-icon">AI</span><div><strong>개인 AI 노트</strong><small>My workspace</small></div></div>
+
+      <nav class="side-nav" aria-label="노트 메뉴">
+        <button class="nav-item active" type="button" data-view="all">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg><span>모든 노트</span><b id="all-count">0</b>
+        </button>
+        <button class="nav-item" type="button" data-view="favorite">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/></svg><span>중요 노트</span><b id="favorite-count">0</b>
+        </button>
+      </nav>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label"><span>주제</span></div>
+        <div class="topic-list" id="topic-list"></div>
       </div>
-    </section>
 
-    <section class="ticker" aria-label="다루는 주제">
-      <div>MACHINE LEARNING <span>✦</span> DEEP LEARNING <span>✦</span> GENERATIVE AI <span>✦</span> AI SYSTEMS <span>✦</span></div>
-    </section>
+      <div class="storage-card">
+        <div class="storage-heading"><span class="status-dot"></span><strong>이 브라우저에 저장</strong></div>
+        <p>노트는 현재 기기에만 보관됩니다. 가끔 백업 파일을 내려받아 주세요.</p>
+        <div class="storage-actions"><button type="button" id="export-button">내보내기</button><label for="import-input">가져오기</label><input id="import-input" type="file" accept="application/json,.json" hidden></div>
+      </div>
+    </aside>
 
-    <section class="notes section" id="notes" aria-labelledby="notes-title">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">01 · STUDY NOTES</p>
-          <h2 id="notes-title">최근에 정리한 것들</h2>
-        </div>
-        <label class="search-box">
-          <span class="sr-only">노트 검색</span>
-          <span aria-hidden="true">⌕</span>
-          <input id="search" type="search" placeholder="제목이나 키워드 검색" autocomplete="off">
+    <div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+    <main class="main-panel">
+      <header class="topbar">
+        <button class="icon-button menu-button" id="menu-button" type="button" aria-label="메뉴 열기"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <label class="search-field">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <span class="sr-only">노트 검색</span><input id="search-input" type="search" placeholder="제목, 내용, 태그 검색" autocomplete="off"><kbd>⌘ K</kbd>
         </label>
-      </div>
+        <button class="icon-button" id="theme-button" type="button" aria-label="화면 테마 변경"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3a6 6 0 1 0 9 9 9 9 0 1 1-9-9Z"/></svg></button>
+      </header>
 
-      <div class="filter-row" aria-label="주제 필터">
-        <button class="filter active" type="button" data-filter="all">전체</button>
-        <button class="filter" type="button" data-filter="deep-learning">딥러닝</button>
-        <button class="filter" type="button" data-filter="generative-ai">생성형 AI</button>
-        <button class="filter" type="button" data-filter="ai-systems">AI 시스템</button>
-      </div>
+      <div class="content-wrap">
+        <section class="page-heading" aria-labelledby="page-title">
+          <div><p class="eyebrow">MY STUDY ARCHIVE</p><h1 id="page-title">AI 공부 노트</h1><p>배운 것을 내 언어로 기록하고, 필요할 때 빠르게 다시 찾아보세요.</p></div>
+          <button class="primary-button" id="new-note-button" type="button"><span>＋</span> 새 노트 작성</button>
+        </section>
 
-      <div class="post-grid">
-        <article class="post-card featured" data-category="deep-learning" data-search="트랜스포머 어텐션 셀프 어텐션 딥러닝 언어 모델">
-          <div class="card-topline"><span>DEEP LEARNING</span><time datetime="2026-09-28">2026.09.28</time></div>
-          <div class="featured-visual" aria-hidden="true">
-            <span>QUERY</span><i></i><span>ATTEND</span><i></i><span>CONTEXT</span>
+        <section class="summary-grid" aria-label="노트 요약">
+          <article><span>전체 노트</span><strong id="summary-total">0</strong><small>개의 기록</small></article>
+          <article><span>공부 주제</span><strong id="summary-topics">0</strong><small>개 분야</small></article>
+          <article class="last-edit"><span>최근 수정</span><strong id="summary-last">아직 없음</strong><small id="summary-last-title">첫 노트를 기다리고 있어요</small></article>
+        </section>
+
+        <section class="notes-section" aria-labelledby="notes-heading">
+          <div class="section-toolbar">
+            <div><h2 id="notes-heading">모든 노트</h2><span id="result-count">0개</span></div>
+            <label class="sort-control">정렬<select id="sort-select"><option value="updated-desc">최근 수정순</option><option value="created-desc">최근 작성순</option><option value="title-asc">제목순</option></select></label>
           </div>
-          <h3><a href="posts/transformer-attention.html">Transformer는 문장의 맥락을 어떻게 읽을까?</a></h3>
-          <p>Query, Key, Value에서 셀프 어텐션과 멀티헤드 어텐션까지 하나의 흐름으로.</p>
-          <div class="card-footer"><span>9 min read</span><a href="posts/transformer-attention.html" aria-label="Transformer 글 읽기">↗</a></div>
-        </article>
-
-        <article class="post-card" data-category="generative-ai" data-search="rag 검색 증강 생성 임베딩 벡터 데이터베이스 llm">
-          <div class="card-topline"><span>GENERATIVE AI</span><time datetime="2026-09-20">2026.09.20</time></div>
-          <div class="mini-diagram threads" aria-hidden="true"><b>Q</b><span>V</span><span>R</span><span>A</span></div>
-          <h3><a href="posts/rag-pipeline.html">RAG는 LLM에게 기억을 어떻게 붙일까?</a></h3>
-          <p>문서 분할, 임베딩, 검색, 생성의 네 단계로 RAG 파이프라인을 해부합니다.</p>
-          <div class="card-footer"><span>7 min read</span><a href="posts/rag-pipeline.html" aria-label="RAG 글 읽기">↗</a></div>
-        </article>
-
-        <article class="post-card" data-category="ai-systems" data-search="평가 환각 hallucination llm judge eval ai 시스템">
-          <div class="card-topline"><span>AI SYSTEMS</span><time datetime="2026-09-14">2026.09.14</time></div>
-          <div class="mini-diagram request" aria-hidden="true"><b>DATA</b><span>→</span><b>EVAL</b><span>→</span><b>SHIP</b></div>
-          <h3><a href="posts/llm-evaluation.html">좋은 AI 답변은 어떻게 측정할까?</a></h3>
-          <p>정답률만으로 부족한 생성형 AI를 데이터셋, 평가 기준, 관찰 가능성으로 점검합니다.</p>
-          <div class="card-footer"><span>8 min read</span><a href="posts/llm-evaluation.html" aria-label="LLM 평가 글 읽기">↗</a></div>
-        </article>
+          <div class="note-grid" id="note-grid"></div>
+          <div class="empty-state" id="empty-state">
+            <div class="empty-visual" aria-hidden="true"><span></span><i></i><b>＋</b></div>
+            <h2>아직 작성한 노트가 없어요</h2>
+            <p>공부한 내용을 완벽하게 정리하려 하지 말고,<br>오늘 이해한 한 문장부터 남겨보세요.</p>
+            <button class="secondary-button" type="button" data-new-note>첫 노트 작성하기</button>
+          </div>
+          <div class="no-results" id="no-results" hidden><h2>검색 결과가 없어요</h2><p>다른 검색어나 주제를 선택해 보세요.</p></div>
+        </section>
       </div>
-      <p class="empty-state" hidden>검색 결과가 없습니다. 다른 키워드로 찾아보세요.</p>
-    </section>
+    </main>
+  </div>
 
-    <section class="roadmap section" id="roadmap" aria-labelledby="roadmap-title">
-      <div class="section-heading light-heading">
-        <div><p class="eyebrow">02 · LEARNING MAP</p><h2 id="roadmap-title">AI의 큰 그림을 따라가는 순서</h2></div>
-        <p>수학과 학습의 원리에서 시작해 실제 AI 제품을 운영하는 단계까지 이어집니다.</p>
+  <dialog class="editor-dialog" id="editor-dialog">
+    <form class="editor-shell" id="note-form" method="dialog">
+      <header class="editor-header">
+        <div><span class="editor-kicker" id="editor-kicker">NEW NOTE</span><strong id="editor-label">새 노트 작성</strong></div>
+        <div class="editor-actions"><span class="save-state" id="save-state">저장 전</span><button class="ghost-button" id="editor-cancel" type="button">취소</button><button class="primary-button compact" type="submit">저장</button></div>
+      </header>
+      <div class="editor-body">
+        <div class="editor-fields">
+          <input type="hidden" id="note-id">
+          <label class="title-field"><span class="sr-only">노트 제목</span><input id="note-title" type="text" placeholder="노트 제목" maxlength="100" required></label>
+          <div class="meta-fields">
+            <label>주제<select id="note-topic"><option>AI 기초</option><option>머신러닝</option><option>딥러닝</option><option>생성형 AI</option><option>논문 리뷰</option><option>프로젝트</option><option>기타</option></select></label>
+            <label>태그<input id="note-tags" type="text" placeholder="쉼표로 구분 (예: LLM, RAG)"></label>
+          </div>
+          <div class="write-toolbar">
+            <div class="editor-tabs" role="tablist" aria-label="작성 모드"><button class="active" type="button" role="tab" data-editor-tab="write">작성</button><button type="button" role="tab" data-editor-tab="preview">미리보기</button></div>
+            <span>Markdown 사용 가능</span>
+          </div>
+          <label class="content-field" id="write-panel"><span class="sr-only">노트 내용</span><textarea id="note-content" placeholder="# 오늘 공부한 내용&#10;&#10;핵심 개념을 내 언어로 정리해 보세요." required></textarea></label>
+          <article class="markdown-preview" id="preview-panel" hidden></article>
+        </div>
+        <aside class="writing-guide">
+          <span>WRITING GUIDE</span><h2>생각을 정리하는 질문</h2>
+          <ol>
+            <li><b>01</b><p><strong>무엇을 배웠나요?</strong>핵심 개념을 한 문장으로 적어보세요.</p></li>
+            <li><b>02</b><p><strong>왜 중요한가요?</strong>언제, 어디에서 쓰이는지 연결해 보세요.</p></li>
+            <li><b>03</b><p><strong>아직 모르는 건?</strong>다음에 확인할 질문을 남겨두세요.</p></li>
+          </ol>
+          <p class="guide-tip">TIP · 완성된 글보다 다시 읽을 수 있는 기록이 더 중요해요.</p>
+        </aside>
       </div>
-      <ol class="roadmap-list">
-        <li><span class="step">01</span><div><h3>수학과 데이터</h3><p>선형대수 · 확률 · 최적화 · 데이터 전처리</p></div><span class="status done">IN PROGRESS</span></li>
-        <li><span class="step">02</span><div><h3>머신러닝</h3><p>회귀 · 분류 · 트리 · 앙상블 · 평가 지표</p></div><span class="status">NEXT</span></li>
-        <li><span class="step">03</span><div><h3>딥러닝</h3><p>신경망 · 역전파 · CNN · Transformer</p></div><span class="status">QUEUED</span></li>
-        <li><span class="step">04</span><div><h3>생성형 AI</h3><p>LLM · 멀티모달 · RAG · 에이전트</p></div><span class="status">QUEUED</span></li>
-        <li><span class="step">05</span><div><h3>AI 시스템</h3><p>서빙 · 평가 · 관찰 가능성 · 안전</p></div><span class="status">QUEUED</span></li>
-      </ol>
-    </section>
+    </form>
+  </dialog>
 
-    <section class="about section" id="about">
-      <div>
-        <p class="eyebrow">03 · PRINCIPLE</p>
-        <h2>AI를 “쓴다”에서<br>“이해한다”로.</h2>
-      </div>
-      <div class="about-copy">
-        <p>이곳은 빠르게 변하는 AI의 핵심 개념을 제 언어로 다시 설명하는 공간입니다. 새 모델 소식만 좇기보다, <mark>왜 작동하는지</mark>와 <mark>실제로 어떻게 검증하는지</mark>에 집중합니다.</p>
-        <p>기초 이론, 논문, 구현, 제품 운영을 오가며 매주 하나의 질문에 답을 남깁니다.</p>
-      </div>
-    </section>
-  </main>
+  <dialog class="reader-dialog" id="reader-dialog">
+    <article class="reader-shell">
+      <header class="reader-topbar"><button class="icon-button" id="reader-close" type="button" aria-label="글 닫기">×</button><div><button class="ghost-button" id="reader-favorite" type="button">☆ 중요</button><button class="ghost-button" id="reader-edit" type="button">수정</button><button class="danger-button" id="reader-delete" type="button">삭제</button></div></header>
+      <div class="reader-content"><p class="reader-topic" id="reader-topic"></p><h1 id="reader-title"></h1><div class="reader-meta" id="reader-meta"></div><div class="reader-tags" id="reader-tags"></div><div class="reader-body" id="reader-body"></div></div>
+    </article>
+  </dialog>
 
-  <footer>
-    <a class="brand footer-brand" href="#top"><span class="brand-mark">01</span><span>BIT BY BIT</span></a>
-    <p>Learn deeply. Explain simply.</p>
-    <p>© 2026 · Built on curiosity.</p>
-  </footer>
+  <dialog class="confirm-dialog" id="confirm-dialog"><div><span class="confirm-icon">!</span><h2>이 노트를 삭제할까요?</h2><p>삭제한 노트는 복구할 수 없습니다.</p><div><button class="ghost-button" id="delete-cancel" type="button">취소</button><button class="danger-button solid" id="delete-confirm" type="button">삭제하기</button></div></div></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="script.js"></script>
 </body>
 </html>
