@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="검색 증강 생성 RAG 파이프라인을 쉽게 설명합니다"><title>RAG는 LLM에게 기억을 어떻게 붙일까? — Bit by Bit</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="../styles.css"></head>
+<body><header class="site-header"><a class="brand" href="../index.html"><span class="brand-mark">01</span><span>BIT BY BIT</span></a><nav><a href="../index.html#notes">노트</a><a href="../index.html#roadmap">로드맵</a><a href="../index.html#about">소개</a></nav><button class="theme-toggle" type="button" aria-label="다크 모드 전환">◐</button></header>
+<main class="article-main"><a class="article-back" href="../index.html#notes">← ALL NOTES</a><article><header class="article-header"><p class="eyebrow">GENERATIVE AI</p><h1>RAG는 LLM에게 기억을 어떻게 붙일까?</h1><div class="article-meta"><time datetime="2026-09-20">2026.09.20</time><span>7 MIN READ</span></div></header><div class="article-body">
+<p>언어 모델은 학습이 끝난 뒤 생긴 문서나 조직 내부 지식을 알지 못한다. 검색 증강 생성(RAG)은 질문과 관련된 자료를 먼저 찾고 그 근거를 프롬프트에 넣어 답하게 한다.</p>
+<div class="concept-flow"><b>CHUNK</b><span>→</span><b>EMBED</b><span>→</span><b>RETRIEVE</b><span>→</span><b>GENERATE</b></div>
+<h2>1. 문서를 검색 가능한 단위로 나눈다</h2><p>긴 문서를 그대로 임베딩하면 주제가 섞이고 원하는 문장을 정확히 찾기 어렵다. 문단이나 의미 단위로 청크를 나누되, 문맥이 잘리지 않도록 일부를 겹치기도 한다.</p>
+<h2>2. 의미를 벡터로 바꾼다</h2><p>임베딩 모델은 문장 의미를 고차원 벡터로 표현한다. 비슷한 내용을 담은 문장은 벡터 공간에서도 가깝다. 문서 벡터와 메타데이터를 벡터 데이터베이스에 저장한다.</p>
+<h2>3. 질문과 가까운 근거를 찾는다</h2><p>사용자 질문도 같은 모델로 임베딩해 가까운 청크를 검색한다. 키워드 검색을 함께 쓰는 하이브리드 검색이나, 후보를 다시 정렬하는 리랭커로 정확도를 높일 수 있다.</p>
+<pre><code>question → embedding → top-k chunks
+prompt = instruction + chunks + question
+answer = LLM(prompt)</code></pre>
+<h2>4. 근거와 함께 생성한다</h2><p>검색된 청크와 질문을 모델에 전달한다. “제공된 근거만 사용하고 출처를 표시하라” 같은 지시가 환각을 줄이는 데 도움을 주지만 완전히 없애지는 못한다.</p>
+<blockquote>RAG의 성능은 모델만이 아니라 문서 품질, 청크 전략, 검색 정확도, 프롬프트가 함께 결정한다.</blockquote>
+</div></article></main><script src="../script.js"></script></body></html>

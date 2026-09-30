@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="머신러닝의 기초부터 생성형 AI와 AI 시스템까지 원리를 연결해서 기록하는 스터디 블로그">
+  <meta name="theme-color" content="#f4f0e8">
+  <title>Bit by Bit — AI를 이해하는 기록</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Bit by Bit 홈">
+      <span class="brand-mark" aria-hidden="true">01</span>
+      <span>BIT BY BIT</span>
+    </a>
+    <nav aria-label="주요 메뉴">
+      <a href="#notes">노트</a>
+      <a href="#roadmap">로드맵</a>
+      <a href="#about">소개</a>
+    </nav>
+    <button class="theme-toggle" type="button" aria-label="다크 모드 전환" title="테마 전환">
+      <span aria-hidden="true">◐</span>
+    </button>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <p class="eyebrow">ARTIFICIAL INTELLIGENCE STUDY LOG · 2026</p>
+      <h1 id="hero-title">AI를 외우지 않고,<br><em>끝까지 이해하기.</em></h1>
+      <p class="hero-copy">선형대수의 한 줄부터 거대 언어 모델의 추론까지. AI가 학습하고 판단하는 원리를 작은 질문으로 쪼개고, 다시 하나의 흐름으로 연결합니다.</p>
+      <div class="hero-actions">
+        <a class="button button-primary" href="#notes">최근 노트 읽기 <span>↘</span></a>
+        <a class="text-link" href="#roadmap">학습 로드맵 보기 <span>→</span></a>
+      </div>
+      <div class="hero-stats" aria-label="블로그 통계">
+        <div><strong>03</strong><span>published notes</span></div>
+        <div><strong>05</strong><span>core topics</span></div>
+        <div><strong>∞</strong><span>questions left</span></div>
+      </div>
+    </section>
+
+    <section class="ticker" aria-label="다루는 주제">
+      <div>MACHINE LEARNING <span>✦</span> DEEP LEARNING <span>✦</span> GENERATIVE AI <span>✦</span> AI SYSTEMS <span>✦</span></div>
+    </section>
+
+    <section class="notes section" id="notes" aria-labelledby="notes-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">01 · STUDY NOTES</p>
+          <h2 id="notes-title">최근에 정리한 것들</h2>
+        </div>
+        <label class="search-box">
+          <span class="sr-only">노트 검색</span>
+          <span aria-hidden="true">⌕</span>
+          <input id="search" type="search" placeholder="제목이나 키워드 검색" autocomplete="off">
+        </label>
+      </div>
+
+      <div class="filter-row" aria-label="주제 필터">
+        <button class="filter active" type="button" data-filter="all">전체</button>
+        <button class="filter" type="button" data-filter="deep-learning">딥러닝</button>
+        <button class="filter" type="button" data-filter="generative-ai">생성형 AI</button>
+        <button class="filter" type="button" data-filter="ai-systems">AI 시스템</button>
+      </div>
+
+      <div class="post-grid">
+        <article class="post-card featured" data-category="deep-learning" data-search="트랜스포머 어텐션 셀프 어텐션 딥러닝 언어 모델">
+          <div class="card-topline"><span>DEEP LEARNING</span><time datetime="2026-09-28">2026.09.28</time></div>
+          <div class="featured-visual" aria-hidden="true">
+            <span>QUERY</span><i></i><span>ATTEND</span><i></i><span>CONTEXT</span>
+          </div>
+          <h3><a href="posts/transformer-attention.html">Transformer는 문장의 맥락을 어떻게 읽을까?</a></h3>
+          <p>Query, Key, Value에서 셀프 어텐션과 멀티헤드 어텐션까지 하나의 흐름으로.</p>
+          <div class="card-footer"><span>9 min read</span><a href="posts/transformer-attention.html" aria-label="Transformer 글 읽기">↗</a></div>
+        </article>
+
+        <article class="post-card" data-category="generative-ai" data-search="rag 검색 증강 생성 임베딩 벡터 데이터베이스 llm">
+          <div class="card-topline"><span>GENERATIVE AI</span><time datetime="2026-09-20">2026.09.20</time></div>
+          <div class="mini-diagram threads" aria-hidden="true"><b>Q</b><span>V</span><span>R</span><span>A</span></div>
+          <h3><a href="posts/rag-pipeline.html">RAG는 LLM에게 기억을 어떻게 붙일까?</a></h3>
+          <p>문서 분할, 임베딩, 검색, 생성의 네 단계로 RAG 파이프라인을 해부합니다.</p>
+          <div class="card-footer"><span>7 min read</span><a href="posts/rag-pipeline.html" aria-label="RAG 글 읽기">↗</a></div>
+        </article>
+
+        <article class="post-card" data-category="ai-systems" data-search="평가 환각 hallucination llm judge eval ai 시스템">
+          <div class="card-topline"><span>AI SYSTEMS</span><time datetime="2026-09-14">2026.09.14</time></div>
+          <div class="mini-diagram request" aria-hidden="true"><b>DATA</b><span>→</span><b>EVAL</b><span>→</span><b>SHIP</b></div>
+          <h3><a href="posts/llm-evaluation.html">좋은 AI 답변은 어떻게 측정할까?</a></h3>
+          <p>정답률만으로 부족한 생성형 AI를 데이터셋, 평가 기준, 관찰 가능성으로 점검합니다.</p>
+          <div class="card-footer"><span>8 min read</span><a href="posts/llm-evaluation.html" aria-label="LLM 평가 글 읽기">↗</a></div>
+        </article>
+      </div>
+      <p class="empty-state" hidden>검색 결과가 없습니다. 다른 키워드로 찾아보세요.</p>
+    </section>
+
+    <section class="roadmap section" id="roadmap" aria-labelledby="roadmap-title">
+      <div class="section-heading light-heading">
+        <div><p class="eyebrow">02 · LEARNING MAP</p><h2 id="roadmap-title">AI의 큰 그림을 따라가는 순서</h2></div>
+        <p>수학과 학습의 원리에서 시작해 실제 AI 제품을 운영하는 단계까지 이어집니다.</p>
+      </div>
+      <ol class="roadmap-list">
+        <li><span class="step">01</span><div><h3>수학과 데이터</h3><p>선형대수 · 확률 · 최적화 · 데이터 전처리</p></div><span class="status done">IN PROGRESS</span></li>
+        <li><span class="step">02</span><div><h3>머신러닝</h3><p>회귀 · 분류 · 트리 · 앙상블 · 평가 지표</p></div><span class="status">NEXT</span></li>
+        <li><span class="step">03</span><div><h3>딥러닝</h3><p>신경망 · 역전파 · CNN · Transformer</p></div><span class="status">QUEUED</span></li>
+        <li><span class="step">04</span><div><h3>생성형 AI</h3><p>LLM · 멀티모달 · RAG · 에이전트</p></div><span class="status">QUEUED</span></li>
+        <li><span class="step">05</span><div><h3>AI 시스템</h3><p>서빙 · 평가 · 관찰 가능성 · 안전</p></div><span class="status">QUEUED</span></li>
+      </ol>
+    </section>
+
+    <section class="about section" id="about">
+      <div>
+        <p class="eyebrow">03 · PRINCIPLE</p>
+        <h2>AI를 “쓴다”에서<br>“이해한다”로.</h2>
+      </div>
+      <div class="about-copy">
+        <p>이곳은 빠르게 변하는 AI의 핵심 개념을 제 언어로 다시 설명하는 공간입니다. 새 모델 소식만 좇기보다, <mark>왜 작동하는지</mark>와 <mark>실제로 어떻게 검증하는지</mark>에 집중합니다.</p>
+        <p>기초 이론, 논문, 구현, 제품 운영을 오가며 매주 하나의 질문에 답을 남깁니다.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="brand footer-brand" href="#top"><span class="brand-mark">01</span><span>BIT BY BIT</span></a>
+    <p>Learn deeply. Explain simply.</p>
+    <p>© 2026 · Built on curiosity.</p>
+  </footer>
+  <script src="script.js"></script>
+</body>
+</html>
