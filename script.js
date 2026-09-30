@@ -32,7 +32,13 @@ function isValidNote(note) { return note && typeof note === 'object' && typeof n
 function persistNotes() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.notes)); }
 function createId() { return crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 function escapeHtml(value = '') { return String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]); }
-function inlineMarkdown(text) { return text.replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/\*([^*]+)\*/g, '<em>$1</em>'); }
+function inlineMarkdown(text) {
+  return text
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\((https:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1 ↗</a>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+}
 
 function renderMarkdown(markdown = '') {
   const lines = escapeHtml(markdown).replace(/\r/g, '').split('\n');
@@ -41,10 +47,12 @@ function renderMarkdown(markdown = '') {
   for (const line of lines) {
     if (line.trim().startsWith('```')) { closeList(); html += inCode ? '</code></pre>' : '<pre><code>'; inCode = !inCode; continue; }
     if (inCode) { html += `${line}\n`; continue; }
+    const image = line.match(/^!\[([^\]]*)\]\((https:\/\/[^)\s]+)\)$/);
     const heading = line.match(/^(#{1,3})\s+(.+)$/);
     const unordered = line.match(/^[-*]\s+(.+)$/);
     const ordered = line.match(/^\d+\.\s+(.+)$/);
-    if (heading) { closeList(); const level = heading[1].length; html += `<h${level}>${inlineMarkdown(heading[2])}</h${level}>`; }
+    if (image) { closeList(); html += `<figure class="note-figure"><img src="${image[2]}" alt="${image[1]}" loading="lazy"><figcaption>${image[1]}</figcaption></figure>`; }
+    else if (heading) { closeList(); const level = heading[1].length; html += `<h${level}>${inlineMarkdown(heading[2])}</h${level}>`; }
     else if (unordered) { if (list !== 'ul') { closeList(); list = 'ul'; html += '<ul>'; } html += `<li>${inlineMarkdown(unordered[1])}</li>`; }
     else if (ordered) { if (list !== 'ol') { closeList(); list = 'ol'; html += '<ol>'; } html += `<li>${inlineMarkdown(ordered[1])}</li>`; }
     else if (line.startsWith('&gt; ')) { closeList(); html += `<blockquote>${inlineMarkdown(line.slice(5))}</blockquote>`; }
