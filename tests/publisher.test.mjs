@@ -5,12 +5,13 @@ const post = { slug:'sample-note', title:'한글 원고', date:'2026-10-30', top
 function server({ posts = [], files = {}, race = false, rejectRef = false, loseRefResponse = false } = {}) {
   const original = globalThis.fetch, calls = []; let head = 'base', heads = 0;
   globalThis.fetch = async (url, init) => {
-    assert.ok(url.startsWith('https://api.github.com/repos/riex71/computer-study-blog/'));
+    assert.ok(url.startsWith('https://api.github.com/repos/riex71/computer-study-blog'));
     assert.equal(init.headers.Authorization, 'Bearer test-token');
-    const path = new URL(url).pathname.replace('/repos/riex71/computer-study-blog/', '');
+    const path = new URL(url).pathname.replace(/^\/repos\/riex71\/computer-study-blog\/?/, '');
     const body = init.body ? JSON.parse(init.body) : null; calls.push({path,method:init.method,body});
     let result;
-    if (path==='git/ref/heads/main') { heads++; result={object:{sha:race && heads>1 ? 'concurrent' : head}}; }
+    if (path==='') result={permissions:{push:true}};
+    else if (path==='git/ref/heads/main') { heads++; result={object:{sha:race && heads>1 ? 'concurrent' : head}}; }
     else if (path==='git/commits/base') result={tree:{sha:'old-tree'}};
     else if (path==='contents/content/posts.json') result={encoding:'base64',content:base64(JSON.stringify(posts))};
     else if (path.startsWith('contents/')) result={encoding:'base64',content:base64(files[path.slice(9)] || '')};
@@ -29,6 +30,12 @@ function server({ posts = [], files = {}, race = false, rejectRef = false, loseR
   return {calls,restore:()=>{globalThis.fetch=original},head:()=>head};
 }
 test('UTF-8 source round-trips without changing Korean or math',()=>assert.equal(unbase64(base64('기억 ∑ α 🙂')),'기억 ∑ α 🙂'));
+test('connects to the repository URL without a trailing slash and disconnects',async()=>{
+ const api=server();try{
+  const publisher=new GitHubPublisher('test-token');await publisher.connect();publisher.disconnect();
+  await assert.rejects(()=>publisher.head(),/먼저 연결/);assert.equal(api.calls.length,1);
+ }finally{api.restore()}
+});
 test('publishes sources, metadata and raster image atomically',async()=>{
  const api=server();try{
   await new GitHubPublisher('test-token').publish({post,markdown:'## 기억\n\n본문',images:[{path:'assets/uploads/sample-note/figure.png',base64:'AQID'}]},'<h2>기억</h2><p>본문</p>');
