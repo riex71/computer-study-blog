@@ -1,4 +1,4 @@
-import { GitHubPublisher, LIVE } from './publisher.mjs';
+const { GitHubPublisher, LIVE } = await import('./publisher.mjs' + new URL(import.meta.url).search);
 const $ = s => document.querySelector(s);
 const fields = ['title','description','slug','date','category','topics','tags','thumbnail','thumbnail-alt','thumbnail-credit','thumbnail-source'];
 const initialParams = new URLSearchParams(location.search);
@@ -34,9 +34,13 @@ function collect() {
 }
 function renderPreview() {
   if (!draft) return;
+  const previewPane=$('.preview-pane'),scroll=previewPane.scrollTop;
   $('#preview-title').textContent = draft.post.title || '제목 미리보기';
   $('#preview-description').textContent = draft.post.description;
-  $('#preview-body').innerHTML = EditorContent.preview(EditorContent.compile(draft.markdown), draft.images);
+  $('#preview-body').innerHTML = EditorContent.preview(EditorContent.compile(draft.markdown, draft.original?.html), draft.images);
+  const math = StudyMath.render($('#preview-body'));
+  $('#math-status').textContent = math.errors ? `${math.errors}개 수식의 문법을 확인해 주세요. 입력한 식은 그대로 보관됩니다.` : '';
+  previewPane.scrollTop=scroll;
   $('#word-count').textContent = draft.markdown.replace(/\s/g, '').length.toLocaleString() + '자';
 }
 async function save() {
@@ -58,6 +62,7 @@ async function save() {
 }
 function fill(next) {
   draft = structuredClone(next); const p = draft.post;
+  draft.markdown = EditorContent.normalizeLegacy(draft.markdown, draft.original?.html);
   if (location.protocol !== 'file:') history.replaceState(null, '', location.pathname + '?draft=' + encodeURIComponent(draft.id));
   for (const key of ['title','description','slug','date','category','thumbnail']) $('#post-' + key).value = p[key] || '';
   $('#post-topics').value = p.topics.join(', '); $('#post-tags').value = p.tags.join(', ');
@@ -120,7 +125,9 @@ function validate() {
   if (!asset.test(p.thumbnail) || p.thumbnail.includes('..')) throw Error('대표 이미지에는 assets/ 경로 또는 https 주소를 써주세요.');
   if (p.thumbnailSource && !/^https:\/\/[^\s<>"']+$/.test(p.thumbnailSource)) throw Error('이미지 출처 링크는 https 주소를 써주세요.');
   p.category ||= '공부 기록';
-  return EditorContent.compile(draft.markdown);
+  const html=EditorContent.compile(draft.markdown, draft.original?.html),probe=document.createElement('div');probe.innerHTML=html;
+  if(StudyMath.render(probe).errors)throw Error('수식 문법을 확인해 주세요. 미리보기에서 오류가 있는 식을 고친 뒤 게시할 수 있습니다.');
+  return html;
 }
 for (const key of fields) $('#post-' + key).addEventListener('input', () => { collect(); renderPreview(); save(); });
 $('#post-title').addEventListener('change', () => {
@@ -129,13 +136,23 @@ $('#post-title').addEventListener('change', () => {
     save();
   }
 });
-$('#markdown-editor').addEventListener('input', () => { collect(); renderPreview(); save(); });
+let previewTimer;
+$('#markdown-editor').addEventListener('input', () => { collect();clearTimeout(previewTimer);previewTimer=setTimeout(renderPreview,100);save(); });
 $('#new-post').addEventListener('click', () => { if (busy) return; save(); fill(blank()); $('#post-title').focus(); });
 $('#load-post').addEventListener('click', () => loadPost($('#published-post').value));
 for (const button of document.querySelectorAll('button[data-mode]')) button.addEventListener('click', () => {
   document.querySelector('.editor-panes').dataset.mode = button.dataset.mode;
   document.querySelectorAll('button[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
 });
+if (matchMedia('(max-width:800px)').matches) document.querySelector('button[data-mode="edit"]').click();
+document.querySelectorAll('[data-insert]').forEach(button => button.addEventListener('click', () => {
+  if (busy) return;
+  const editor=$('#markdown-editor'), start=editor.selectionStart, end=editor.selectionEnd, selected=editor.value.slice(start,end);
+  const snippets={heading:'\n\n## '+(selected||'소제목')+'\n\n',link:'['+(selected||'링크 설명')+'](https://example.com)',code:'\n\n```python\n'+(selected||'print("hello")')+'\n```\n\n',inlineMath:'$'+(selected||'x_t')+'$',blockMath:'\n\n$$\n'+(selected||'h_t = \\bar{A}h_{t-1} + \\bar{B}x_t')+'\n$$\n\n',table:'\n\n| 항목 | 값 |\n| --- | --- |\n| 예시 | 1 |\n\n'};
+  if(document.querySelector('.editor-panes').dataset.mode==='preview')document.querySelector('button[data-mode="edit"]').click();
+  editor.setRangeText(snippets[button.dataset.insert],start,end,'end');editor.focus();collect();renderPreview();save();
+}));
+$('#open-markdown-help').addEventListener('click',()=>{$('#markdown-help').open=true;});
 $('#image-upload').addEventListener('change', async event => {
   const file = event.target.files[0]; event.target.value = ''; if (!file || busy) return; collect();
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(draft.post.slug)) { message('그림을 넣기 전에 ‘글 정보’에서 글 주소를 정해 주세요.'); $('.metadata-panel').open = true; $('#post-slug').focus(); return; }
@@ -152,7 +169,7 @@ $('#image-upload').addEventListener('change', async event => {
     const ext = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1];
     const path = 'assets/uploads/' + draft.post.slug + '/' + Date.now() + '-' + crypto.randomUUID().slice(0,8) + '.' + ext;
     draft.images.push({path,type:file.type,base64:btoa(binary)});
-    const editor = $('#markdown-editor'), insert = '\n\n![그림 설명을 적어주세요](../' + path + ')\n\n그림 출처: 저자, 논문 또는 원문 링크\n';
+    const editor = $('#markdown-editor'), insert = '\n\n![그림 설명을 적어주세요](../' + path + ')\n\n그림 설명: 설명과 출처를 적어주세요.\n';
     editor.setRangeText(insert, editor.selectionStart, editor.selectionEnd, 'end');
     $('#post-slug').disabled = true; collect(); renderPreview(); await save(); message('그림을 첨부했습니다. 그림 설명과 출처를 함께 적어주세요. 게시하면 이미지도 업로드됩니다.');
   } catch (error) { message(error.message || '그림을 불러오지 못했습니다.'); }
