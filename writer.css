@@ -4,3 +4,4 @@ textarea{font:inherit;color:inherit;resize:vertical}button,input,textarea,select
 
 .writer-sidebar>section{min-width:0}.draft-item{min-width:0;max-width:100%}.writer-header #draft-status{min-width:0}.writer-layout,.writing-desk,.editor-panes{max-width:100%}
 @media(max-width:800px){.writer-sidebar{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.writer-message:not(:empty){position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:50;width:max-content;max-width:min(700px,calc(100% - 32px));margin:0;padding:13px 20px;border:1px solid var(--line-strong);border-radius:4px;background:var(--surface);box-shadow:0 8px 40px #0001}

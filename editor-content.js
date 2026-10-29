@@ -1,5 +1,7 @@
 /* One sanitizer serves both the preview and the published canonical source. */
 (() => {
+  // Numeric ranges such as 75~80% are literal text; strikethrough needs ~~.
+  marked.use({ tokenizer: { del(source) { return source.startsWith('~~') ? false : undefined; } } });
   const tags = ['p','br','h2','h3','h4','ul','ol','li','a','img','figure','figcaption','table','thead','tbody','tfoot','tr','th','td','caption','pre','code','blockquote','hr','em','s','del','sub','sup','span','div','section','dl','dt','dd','details','summary'];
   function compile(markdown) {
     const clean = DOMPurify.sanitize(marked.parse(markdown, { breaks: false, gfm: true }), {

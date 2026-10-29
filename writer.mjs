@@ -70,7 +70,7 @@ function renderDrafts() {
   for (const entry of [...drafts].sort((a,b) => b.savedAt.localeCompare(a.savedAt))) {
     const row = document.createElement('div'); row.className = 'draft-item' + (entry.id === draft?.id ? ' active' : '');
     const open = document.createElement('button'); open.type = 'button'; open.textContent = entry.post.title || '제목 없는 글'; open.title = open.textContent;
-    open.addEventListener('click', async () => { if (busy) return; await save(); const latest = drafts.find(d => d.id === entry.id); fill(latest); });
+    open.addEventListener('click', () => { if (busy || draft?.id === entry.id) return; save(); fill(entry); });
     const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', open.textContent + ' 임시 글 삭제');
     remove.addEventListener('click', async () => {
       if (busy || !confirm('이 브라우저의 임시 글을 삭제할까요? 공개된 글은 유지됩니다.')) return;
@@ -90,11 +90,11 @@ function populatePosts() {
 }
 async function loadPost(slug, force = false) {
   if (!slug || busy) return;
-  await save();
   const existing = drafts.find(d => d.original?.post.slug === slug);
-  if (existing && !force) { fill(existing); message('이 글의 임시 원고를 이어 씁니다. 최신 공개 원고로 다시 시작하려면 임시 글을 먼저 내려받고 삭제해 주세요.'); return; }
-  busy = true; $('#load-post').disabled = true;
+  if (existing && !force) { if (draft?.id !== existing.id) { save(); fill(existing); } message('이 글의 임시 원고를 이어 씁니다. 최신 공개 원고로 다시 시작하려면 임시 글을 먼저 내려받고 삭제해 주세요.'); return; }
+  busy = true; $('#load-post').disabled = true; $('#new-post').disabled = true; $('.writing-desk').inert = true;
   try {
+    await save();
     let post, markdown, html;
     if (publisher) {
       const sha = await publisher.head(); posts = JSON.parse(await publisher.file('content/posts.json', sha)); populatePosts(); post = posts.find(p => p.slug === slug);
@@ -106,7 +106,7 @@ async function loadPost(slug, force = false) {
     }
     const next = blank(); next.post = structuredClone(post); next.markdown = markdown.trim(); next.original = { post:structuredClone(post), markdown, html };
     fill(next); await save(); message('공개 원고를 불러왔습니다. 수정 사항은 게시 전까지 이 브라우저에만 저장됩니다.');
-  } catch (error) { message(error.message); } finally { busy = false; $('#load-post').disabled = false; }
+  } catch (error) { message(error.message); } finally { busy = false; $('#load-post').disabled = false; $('#new-post').disabled = false; $('.writing-desk').inert = false; }
 }
 function validate() {
   collect(); const p = draft.post;
@@ -123,8 +123,14 @@ function validate() {
   return EditorContent.compile(draft.markdown);
 }
 for (const key of fields) $('#post-' + key).addEventListener('input', () => { collect(); renderPreview(); save(); });
+$('#post-title').addEventListener('change', () => {
+  if (!$('#post-slug').value && !draft.original && !draft.images.length && $('#post-title').value.trim()) {
+    $('#post-slug').value = $('#post-title').value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80).replace(/-$/, '') || 'note-' + today().replace(/-/g, '') + '-' + draft.id.slice(0, 6);
+    save();
+  }
+});
 $('#markdown-editor').addEventListener('input', () => { collect(); renderPreview(); save(); });
-$('#new-post').addEventListener('click', async () => { if (busy) return; await save(); fill(blank()); $('#post-title').focus(); });
+$('#new-post').addEventListener('click', () => { if (busy) return; save(); fill(blank()); $('#post-title').focus(); });
 $('#load-post').addEventListener('click', () => loadPost($('#published-post').value));
 for (const button of document.querySelectorAll('button[data-mode]')) button.addEventListener('click', () => {
   document.querySelector('.editor-panes').dataset.mode = button.dataset.mode;
@@ -185,12 +191,14 @@ $('#review-button').addEventListener('click', async () => {
   try {
     validate(); await save();
     $('#review-post-title').textContent = draft.post.title; $('#review-url').textContent = LIVE + 'posts/' + draft.post.slug + '.html';
-    $('#publish-status').textContent = publisher ? '게시할 준비가 되었습니다.' : '아래 GitHub 연결을 먼저 완료해 주세요. 작성한 원고는 임시 저장되어 있습니다.';
+    $('#publish-status').textContent = publisher ? '게시할 준비가 되었습니다.' : 'GitHub 연결을 먼저 완료해 주세요. 작성한 원고는 임시 저장되어 있습니다.';
+    $('#review-connect').hidden = !!publisher;
     $('#publish-button').disabled = !publisher; $('#published-link').hidden = true; $('#deployment-link').hidden = true;
     $('#publish-button').hidden = false; $('#review-dialog').showModal();
   } catch (error) { message(error.message); $('.metadata-panel').open = true; }
 });
 $('#close-review').addEventListener('click', () => { if (!busy) $('#review-dialog').close(); });
+$('#review-connect').addEventListener('click', () => { $('#review-dialog').close(); $('#token-help').open = true; $('.connection-panel').scrollIntoView({block:'center'}); $('#github-token').focus({preventScroll:true}); });
 $('#review-dialog').addEventListener('cancel', e => { if (busy) e.preventDefault(); });
 async function watchDeployment(result, attempt = 0) {
   clearTimeout(pollTimer);
