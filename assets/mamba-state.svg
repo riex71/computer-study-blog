@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="580" viewBox="0 0 1000 580" fill="none">
+  <rect width="1000" height="580" fill="#E9EEE5"/>
+  <g stroke="#334C3C" stroke-width="2">
+    <path d="M120 290H220M390 290H470M640 290H720M890 290H940"/>
+    <path d="M305 428V358M555 428V358M805 428V358M305 222V151M555 222V151M805 222V151"/>
+    <path d="M208 284L220 290L208 296M458 284L470 290L458 296M708 284L720 290L708 296M299 163L305 151L311 163M549 163L555 151L561 163M799 163L805 151L811 163"/>
+    <rect x="220" y="222" width="170" height="136" rx="68" fill="#F6F7F1"/>
+    <rect x="470" y="222" width="170" height="136" rx="68" fill="#F6F7F1"/>
+    <rect x="720" y="222" width="170" height="136" rx="68" fill="#F6F7F1"/>
+  </g>
+  <g fill="#334C3C" font-family="monospace" text-anchor="middle" font-size="30">
+    <text x="305" y="300">h₁</text><text x="555" y="300">h₂</text><text x="805" y="300">h₃</text>
+    <text x="305" y="470">x₁</text><text x="555" y="470">x₂</text><text x="805" y="470">x₃</text>
+    <text x="305" y="128">y₁</text><text x="555" y="128">y₂</text><text x="805" y="128">y₃</text>
+  </g>
+  <text x="55" y="65" fill="#617061" font-family="monospace" font-size="16" letter-spacing="3">SELECTIVE STATE SPACE</text>
+  <text x="55" y="535" fill="#617061" font-family="monospace" font-size="15">INPUT → STATE → OUTPUT</text>
+</svg>

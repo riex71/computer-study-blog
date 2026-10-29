@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="내가 공부한 AI 지식을 직접 작성하고 관리하는 브라우저 기반 개인 노트">
+  <meta name="theme-color" content="#f7f7f3">
+  <title>개인 노트 — Studybase</title>
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-row">
+        <a class="brand" href="index.html" aria-label="공개 블로그로 돌아가기"><span class="brand-mark">S</span><span>STUDYBASE</span></a>
+        <button class="icon-button sidebar-close" id="sidebar-close" type="button" aria-label="메뉴 닫기">×</button>
+      </div>
+
+      <p style="margin:24px 0 0;font-size:12px"><a href="index.html" style="color:inherit">← 공개 블로그로 돌아가기</a></p>
+      <div class="workspace-card"><span class="workspace-icon">AI</span><div><strong>개인 AI 노트</strong><small>My workspace</small></div></div>
+
+      <nav class="side-nav" aria-label="노트 메뉴">
+        <button class="nav-item active" type="button" data-view="all">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg><span>모든 노트</span><b id="all-count">0</b>
+        </button>
+        <button class="nav-item" type="button" data-view="favorite">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/></svg><span>중요 노트</span><b id="favorite-count">0</b>
+        </button>
+      </nav>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label"><span>주제</span></div>
+        <div class="topic-list" id="topic-list"></div>
+      </div>
+
+      <div class="storage-card">
+        <div class="storage-heading"><span class="status-dot"></span><strong>이 브라우저에 저장</strong></div>
+        <p>노트는 현재 기기에만 보관됩니다. 가끔 백업 파일을 내려받아 주세요.</p>
+        <div class="storage-actions"><button type="button" id="export-button">내보내기</button><label for="import-input">가져오기</label><input id="import-input" type="file" accept="application/json,.json" hidden></div>
+      </div>
+    </aside>
+
+    <div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+    <main class="main-panel">
+      <header class="topbar">
+        <button class="icon-button menu-button" id="menu-button" type="button" aria-label="메뉴 열기"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <label class="search-field">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <span class="sr-only">노트 검색</span><input id="search-input" type="search" placeholder="제목, 내용, 태그 검색" autocomplete="off"><kbd>⌘ K</kbd>
+        </label>
+        <button class="icon-button" id="theme-button" type="button" aria-label="화면 테마 변경"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3a6 6 0 1 0 9 9 9 9 0 1 1-9-9Z"/></svg></button>
+      </header>
+
+      <div class="content-wrap">
+        <section class="page-heading" aria-labelledby="page-title">
+          <div><p class="eyebrow">MY STUDY ARCHIVE</p><h1 id="page-title">AI 공부 노트</h1><p>배운 것을 내 언어로 기록하고, 필요할 때 빠르게 다시 찾아보세요.</p></div>
+          <button class="primary-button" id="new-note-button" type="button"><span>＋</span> 새 노트 작성</button>
+        </section>
+
+        <section class="summary-grid" aria-label="노트 요약">
+          <article><span>전체 노트</span><strong id="summary-total">0</strong><small>개의 기록</small></article>
+          <article><span>공부 주제</span><strong id="summary-topics">0</strong><small>개 분야</small></article>
+          <article class="last-edit"><span>최근 수정</span><strong id="summary-last">아직 없음</strong><small id="summary-last-title">첫 노트를 기다리고 있어요</small></article>
+        </section>
+
+        <section class="published-section" aria-labelledby="published-heading">
+          <div class="section-toolbar">
+            <div><h2 id="published-heading">공개 글</h2><span>2개</span></div>
+            <span class="published-note">스터디 제출용으로 공개된 글</span>
+          </div>
+          <a class="published-card" href="posts/engram-conditional-memory.html">
+            <span class="topic-badge">논문 리뷰</span>
+            <div>
+              <h3>AI도 암기와 사고를 나눠야 할까? DeepSeek Engram</h3>
+              <p>N-gram 메모리 조회와 문맥 기반 게이트의 원리, MoE 비교 실험, RAG·대화 기억과의 차이를 살펴봅니다.</p>
+            </div>
+            <span class="published-arrow" aria-hidden="true">↗</span>
+          </a>
+          <a class="published-card" href="posts/mamba-selective-ssm.html">
+            <span class="topic-badge">논문 리뷰</span>
+            <div>
+              <h3>Mamba: Attention 없이 긴 문맥을 다루는 Selective SSM</h3>
+              <p>선택적 상태 공간 모델의 원리부터 하드웨어 친화적 scan, Transformer와의 차이까지 원 논문과 IBM 도해로 정리했습니다.</p>
+            </div>
+            <span class="published-arrow" aria-hidden="true">↗</span>
+          </a>
+        </section>
+
+        <section class="notes-section" aria-labelledby="notes-heading">
+          <div class="section-toolbar">
+            <div><h2 id="notes-heading">모든 노트</h2><span id="result-count">0개</span></div>
+            <label class="sort-control">정렬<select id="sort-select"><option value="updated-desc">최근 수정순</option><option value="created-desc">최근 작성순</option><option value="title-asc">제목순</option></select></label>
+          </div>
+          <div class="note-grid" id="note-grid"></div>
+          <div class="empty-state" id="empty-state">
+            <div class="empty-visual" aria-hidden="true"><span></span><i></i><b>＋</b></div>
+            <h2>아직 작성한 노트가 없어요</h2>
+            <p>공부한 내용을 완벽하게 정리하려 하지 말고,<br>오늘 이해한 한 문장부터 남겨보세요.</p>
+            <button class="secondary-button" type="button" data-new-note>첫 노트 작성하기</button>
+          </div>
+          <div class="no-results" id="no-results" hidden><h2>검색 결과가 없어요</h2><p>다른 검색어나 주제를 선택해 보세요.</p></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <dialog class="editor-dialog" id="editor-dialog">
+    <form class="editor-shell" id="note-form" method="dialog">
+      <header class="editor-header">
+        <div><span class="editor-kicker" id="editor-kicker">NEW NOTE</span><strong id="editor-label">새 노트 작성</strong></div>
+        <div class="editor-actions"><span class="save-state" id="save-state">저장 전</span><button class="ghost-button" id="editor-cancel" type="button">취소</button><button class="primary-button compact" type="submit">저장</button></div>
+      </header>
+      <div class="editor-body">
+        <div class="editor-fields">
+          <input type="hidden" id="note-id">
+          <label class="title-field"><span class="sr-only">노트 제목</span><input id="note-title" type="text" placeholder="노트 제목" maxlength="100" required></label>
+          <div class="meta-fields">
+            <label>주제<select id="note-topic"><option>AI 기초</option><option>머신러닝</option><option>딥러닝</option><option>생성형 AI</option><option>논문 리뷰</option><option>프로젝트</option><option>기타</option></select></label>
+            <label>태그<input id="note-tags" type="text" placeholder="쉼표로 구분 (예: LLM, RAG)"></label>
+          </div>
+          <div class="write-toolbar">
+            <div class="editor-tabs" role="tablist" aria-label="작성 모드"><button class="active" type="button" role="tab" data-editor-tab="write">작성</button><button type="button" role="tab" data-editor-tab="preview">미리보기</button></div>
+            <span>Markdown 사용 가능</span>
+          </div>
+          <label class="content-field" id="write-panel"><span class="sr-only">노트 내용</span><textarea id="note-content" placeholder="# 오늘 공부한 내용&#10;&#10;핵심 개념을 내 언어로 정리해 보세요." required></textarea></label>
+          <article class="markdown-preview" id="preview-panel" hidden></article>
+        </div>
+        <aside class="writing-guide">
+          <span>WRITING GUIDE</span><h2>생각을 정리하는 질문</h2>
+          <ol>
+            <li><b>01</b><p><strong>무엇을 배웠나요?</strong>핵심 개념을 한 문장으로 적어보세요.</p></li>
+            <li><b>02</b><p><strong>왜 중요한가요?</strong>언제, 어디에서 쓰이는지 연결해 보세요.</p></li>
+            <li><b>03</b><p><strong>아직 모르는 건?</strong>다음에 확인할 질문을 남겨두세요.</p></li>
+          </ol>
+          <p class="guide-tip">TIP · 완성된 글보다 다시 읽을 수 있는 기록이 더 중요해요.</p>
+        </aside>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="reader-dialog" id="reader-dialog">
+    <article class="reader-shell">
+      <header class="reader-topbar"><button class="icon-button" id="reader-close" type="button" aria-label="글 닫기">×</button><div><button class="ghost-button" id="reader-favorite" type="button">☆ 중요</button><button class="ghost-button" id="reader-edit" type="button">수정</button><button class="danger-button" id="reader-delete" type="button">삭제</button></div></header>
+      <div class="reader-content"><p class="reader-topic" id="reader-topic"></p><h1 id="reader-title"></h1><div class="reader-meta" id="reader-meta"></div><div class="reader-tags" id="reader-tags"></div><div class="reader-body" id="reader-body"></div></div>
+    </article>
+  </dialog>
+
+  <dialog class="confirm-dialog" id="confirm-dialog"><div><span class="confirm-icon">!</span><h2>이 노트를 삭제할까요?</h2><p>삭제한 노트는 복구할 수 없습니다.</p><div><button class="ghost-button" id="delete-cancel" type="button">취소</button><button class="danger-button solid" id="delete-confirm" type="button">삭제하기</button></div></div></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="script.js"></script>
+</body>
+</html>

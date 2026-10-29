@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<rss version="2.0">
+  <channel>
+    <title>Studybase — AI 공부 기록</title>
+    <link>https://riex71.github.io/computer-study-blog/</link>
+    <description>논문을 읽고 원리를 연결하는 윤동현의 AI 공부 기록</description>
+    <language>ko-KR</language>
+    <item>
+      <title>AI도 암기와 사고를 나눠야 할까? DeepSeek Engram</title>
+      <link>https://riex71.github.io/computer-study-blog/posts/engram-conditional-memory.html</link>
+      <guid>https://riex71.github.io/computer-study-blog/posts/engram-conditional-memory.html</guid>
+      <description>입력 토큰으로 주소를 정하는 메모리, 문맥에 따라 열리는 게이트. 원 논문의 그림 6점과 실험을 따라 계산과 저장의 역할 분담을 살펴봅니다.</description>
+      <pubDate>Thu, 29 Oct 2026 00:00:00 +0900</pubDate>
+    </item>
+    <item>
+      <title>Mamba: Attention 없이 긴 문맥을 다루는 Selective SSM</title>
+      <link>https://riex71.github.io/computer-study-blog/posts/mamba-selective-ssm.html</link>
+      <guid>https://riex71.github.io/computer-study-blog/posts/mamba-selective-ssm.html</guid>
+      <description>어떤 정보를 기억하고 잊을까. 선택적 상태 공간 모델의 원리와 GPU 친화적인 scan, Transformer와의 차이를 연결합니다.</description>
+      <pubDate>Wed, 30 Sep 2026 00:00:00 +0900</pubDate>
+    </item>
+  </channel>
+</rss>
