@@ -1,0 +1,80 @@
+<h2 id="section-01">한 문장 요약</h2>
+
+Mamba는 시퀀스를 고정 크기의 hidden state에 압축하는 State Space Model(SSM)에 입력별 선택 메커니즘을 더해, 어떤 정보를 기억하고 잊을지를 토큰마다 결정하는 모델이다.
+
+> 핵심은 attention을 근사하는 것이 아니라, 상태를 업데이트하는 규칙 자체를 입력에 따라 바꾸는 것이다.
+
+<h2 id="section-02">1. 왜 Transformer 외의 선택지가 필요한가</h2>
+
+Transformer의 self-attention은 모든 토큰 쌍의 관계를 계산하므로 학습 계산량과 메모리가 시퀀스 길이 L에 대해 대체로 O(L²)로 증가한다. 자기회귀 추론에서는 이전 토큰의 key/value를 보관하는 KV cache도 문맥과 함께 커진다.
+
+반면 recurrent SSM은 과거를 고정 크기 상태에 요약한다. Mamba 논문은 이 구조를 이용해 시퀀스 길이에 선형으로 확장되는 계산과 빠른 자기회귀 생성을 목표로 한다.
+
+<h2 id="section-03">2. SSM의 기본 형태</h2>
+
+연속시간 SSM을 이산화하면 다음과 같은 recurrence로 이해할 수 있다.
+
+```
+h_t = A_bar h_(t-1) + B_bar x_t
+y_t = C h_t
+```
+
+*   h\_t: 지금까지의 정보를 압축한 상태
+*   A: 이전 상태를 얼마나 유지·변환할지 결정하는 전이
+*   B: 현재 입력을 상태에 쓰는 방법
+*   C: 상태에서 출력을 읽는 방법
+*   Δ: 연속시간 시스템을 토큰 간격에 맞게 이산화하는 step size
+
+전통적인 선형 시불변 SSM에서는 이 파라미터들이 모든 토큰에 동일하다. 계산은 효율적이지만, 내용에 따라 중요한 토큰만 선택적으로 보존하기 어렵다.
+
+<h2 id="section-04">3. Mamba의 핵심: Selective SSM</h2>
+
+Mamba에서는 Δ\_t, B\_t, C\_t가 현재 입력 x\_t의 함수가 된다. Δ\_t는 이전 상태를 얼마나 잊고 새 입력에 반응할지, B\_t는 어떤 특징을 상태에 기록할지, C\_t는 어떤 특징을 출력으로 읽을지를 조절한다.
+
+이 입력 의존성이 내용 기반 선택을 가능하게 하지만, 기존 SSM에서 쓰던 단순 convolution 계산은 사용할 수 없게 된다.
+
+<h2 id="section-05">4. 원 논문의 Mamba 블록</h2>
+
+<figure class="note-figure"><img src="https://arxiv.org/html/2312.00752v2/architecture.svg" alt="Mamba 논문 Figure 3 — H3, Mamba, Transformer 계열 블록 비교" loading="lazy"><figcaption>Gu &amp; Dao, Mamba: Linear-Time Sequence Modeling with Selective State Spaces, Figure 3, CC BY 4.0.</figcaption></figure>
+
+Mamba 블록은 입력을 두 갈래로 투영한다. 주 경로는 짧은 지역 패턴을 보는 Conv1D와 SiLU를 거쳐 selective SSM으로 긴 범위의 상태를 갱신한다. 다른 경로는 gate로 작동하며 SSM 출력을 입력 의존적으로 조절한다. 두 경로를 원소별로 곱한 뒤 출력 투영과 residual connection을 적용한다.
+
+논문 설계의 특징은 attention 블록과 MLP 블록을 번갈아 쌓지 않고, 하나의 Mamba 블록을 동질적으로 반복한다는 점이다.
+
+<h2 id="section-06">5. Hardware-aware selective scan</h2>
+
+선택 파라미터는 토큰마다 달라져 convolution으로 한 번에 계산하기 어렵다. 논문은 이를 위해 GPU 친화적인 parallel scan을 사용한다.
+
+*   추론: recurrence를 한 토큰씩 진행하므로 상태 크기가 문맥 길이와 함께 늘지 않는다.
+*   학습: scan 알고리즘으로 여러 위치의 계산을 병렬화한다.
+*   메모리: 큰 중간 상태를 HBM에 전부 기록하지 않고 SRAM 안에서 fusion과 recomputation을 활용한다.
+
+즉 알고리즘의 선형 복잡도만이 아니라, GPU 메모리 계층에 맞춘 구현이 실제 속도의 중요한 부분이다.
+
+<h2 id="section-07">6. IBM의 Mamba 블록 해설</h2>
+
+<figure class="note-figure"><img src="https://assets.ibm.com/is/image/ibm/mamba-block-1?dpr=off&amp;ts=1763387611245" alt="IBM Think의 Mamba 블록 도해" loading="lazy"><figcaption>IBM Think, What is the Mamba model?</figcaption></figure>
+
+IBM의 도해는 왼쪽 경로의 Conv1D와 SiLU, selective SSM, 그리고 오른쪽의 SiLU gate를 구분해 보여준다. 두 경로의 원소별 곱은 현재 입력이 상태 기반 출력을 얼마나 통과시킬지도 조절한다.
+
+<h2 id="section-08">7. Transformer와 비교할 때 볼 것</h2>
+
+*   학습 복잡도: 표준 attention은 O(L²), Mamba는 시퀀스 길이에 대해 O(L)을 목표로 한다.
+*   추론 메모리: Transformer의 KV cache는 문맥과 함께 증가하지만 Mamba의 recurrent state는 고정 크기다.
+*   강점: 긴 스트림, 낮은 지연, 메모리 효율이 중요한 환경에 유리할 수 있다.
+*   한계: IBM은 in-context learning, 복사, 긴 문맥 추론에서는 Transformer가 더 강한 경우가 있다고 정리한다.
+*   실무 방향: attention의 정밀한 검색 능력과 SSM의 효율을 결합한 hybrid 구조도 중요한 선택지다.
+
+<h2 id="section-09">8. 논문 결과를 읽는 법</h2>
+
+원 논문은 동일 규모 Transformer 대비 약 5배 높은 생성 처리량, 문맥 길이에 대한 선형 확장, 그리고 실험 조건에서 Mamba-3B가 약 두 배 크기 Transformer와 경쟁하는 성능을 보고한다. 다만 이는 특정 하드웨어·커널·배치·모델 설정에서 얻은 결과이므로 모든 환경의 보장으로 읽으면 안 된다.
+
+<h2 id="section-10">9. 공부 체크리스트</h2>
+
+*   selective scan이 associative scan으로 병렬화되는 과정을 직접 유도하기
+*   Δ가 forget gate와 어떤 점에서 비슷하고 다른지 비교하기
+*   Transformer KV cache와 Mamba state의 실제 메모리 사용량 측정하기
+*   긴 문맥에서 검색, 복사, 추론 과제를 분리해 비교하기
+*   후속 구조인 Mamba-2와 state space duality 살펴보기
+
+<section class="article-sources" aria-labelledby="sources-heading"><h2 id="sources-heading">참고 자료</h2><ul><li><a href="https://arxiv.org/html/2312.00752" target="_blank" rel="noopener noreferrer">Mamba 원 논문 — arXiv</a></li><li><a href="https://github.com/state-spaces/mamba" target="_blank" rel="noopener noreferrer">공식 구현 — state-spaces/mamba</a></li><li><a href="https://www.ibm.com/think/topics/mamba-model" target="_blank" rel="noopener noreferrer">IBM Think — What is the Mamba model?</a></li><li><a href="https://www.ibm.com/think/topics/state-space-model" target="_blank" rel="noopener noreferrer">IBM Think — What are state space models?</a></li></ul></section>

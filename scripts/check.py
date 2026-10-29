@@ -22,7 +22,7 @@ class Document(HTMLParser):
 
 documents={}
 for file in ROOT.rglob('*.html'):
-    if '.git' in file.parts or 'templates' in file.parts:continue
+    if any(part in file.parts for part in ['.git', 'templates', 'content', '_site']):continue
     d=Document();d.feed(file.read_text(encoding='utf-8'));documents[file.resolve()]=d
     assert not d.duplicates, f'Duplicate IDs in {file}: {d.duplicates}'
 

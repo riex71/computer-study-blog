@@ -12,7 +12,7 @@
   $$('[data-theme-toggle]').forEach(button => button.addEventListener('click', () => { const dark = document.documentElement.dataset.theme !== 'dark'; if (dark) document.documentElement.dataset.theme = 'dark'; else delete document.documentElement.dataset.theme; storage.set('studybase.theme', dark ? 'dark' : 'light'); updateTheme(); }));
   updateTheme();
   function updateSaved() { $$('[data-save]').forEach(button => { const active = saved.has(button.dataset.save); button.setAttribute('aria-pressed', String(active)); button.setAttribute('aria-label', active ? '읽기 목록에서 해제' : '읽기 목록에 저장'); const label = button.querySelector('[data-save-label]'); if (label) label.textContent = active ? '저장됨' : '나중에 읽기'; }); }
-  $$('[data-save]').forEach(button => button.addEventListener('click', () => { const slug = button.dataset.save; if (saved.has(slug)) saved.delete(slug); else saved.add(slug); const persisted = storage.set('studybase.reading.v1', JSON.stringify([...saved])); updateSaved(); if (document.body.dataset.page === 'home') filterPosts(); toast(persisted ? (saved.has(slug) ? '이 브라우저의 읽기 목록에 저장했어요.' : '읽기 목록에서 해제했어요.') : '브라우저 저장소를 사용할 수 없어 이 화면에서만 유지됩니다.'); }));
+  $$('[data-save]').forEach(button => button.addEventListener('click', () => { const slug = button.dataset.save; if (saved.has(slug)) saved.delete(slug); else saved.add(slug); const persisted = storage.set('studybase.reading.v1', JSON.stringify([...saved])); updateSaved(); filterPosts(); toast(persisted ? (saved.has(slug) ? '이 브라우저의 읽기 목록에 저장했어요.' : '읽기 목록에서 해제했어요.') : '브라우저 저장소를 사용할 수 없어 이 화면에서만 유지됩니다.'); }));
   updateSaved();
   const normalize = value => value.normalize('NFKC').toLocaleLowerCase('ko-KR');
   const cards = $$('[data-post-card]');
@@ -53,8 +53,66 @@
     filterPosts(false);
     fetch('search-index.json' + assetVersion).then(r => { if (!r.ok) throw new Error('Search index unavailable'); return r.json(); }).then(posts => { searchContent = new Map(posts.map(post => [post.slug, post.search])); filterPosts(false); }).catch(() => { /* Metadata search remains available when offline. */ });
   }
-  const article = $('.public-article');
+  const siteRoot = new URL(document.body.dataset.page === 'article' ? '../' : './', location.href);
+  let globalIndex;
+  const searchDialog = $('[data-search-dialog]');
+  const globalSearch = $('[data-global-search]');
+  const globalResults = $('[data-global-results]');
+  async function searchAll() {
+    globalResults.textContent = '글을 찾는 중…';
+    try {
+      globalIndex ||= await fetch(new URL('search-index.json' + assetVersion, siteRoot)).then(r => { if (!r.ok) throw Error(); return r.json(); });
+      const terms = normalize(globalSearch.value.trim()).split(/\s+/).filter(Boolean);
+      const matches = globalIndex.filter(p => terms.every(t => normalize(p.search).includes(t)));
+      globalResults.replaceChildren();
+      for (const post of matches) {
+        const link = document.createElement('a'); link.href = new URL('posts/' + post.slug + '.html', siteRoot);
+        const date = document.createElement('small'); date.textContent = post.date + ' / ' + post.tags.slice(0, 3).join(' · ');
+        const title = document.createElement('h3'); title.textContent = post.title;
+        const excerpt = document.createElement('p');
+        const body = post.text || post.description;
+        const pos = terms.length ? normalize(body).indexOf(terms[0]) : -1;
+        const start = Math.max(0, pos - 35); excerpt.textContent = (start ? '…' : '') + body.slice(start, start + 145) + (body.length > start + 145 ? '…' : '');
+        link.append(date, title, excerpt); globalResults.append(link);
+      }
+      if (!matches.length) globalResults.textContent = '일치하는 글이 없어요. 다른 단어로 찾아보세요.';
+    } catch { globalResults.textContent = '검색을 불러오지 못했습니다. 아카이브에서 글을 찾아주세요.'; }
+  }
+  $$('[data-open-search]').forEach(button => button.addEventListener('click', () => { searchDialog.showModal(); globalSearch.focus(); searchAll(); }));
+  $('[data-close-search]')?.addEventListener('click', () => searchDialog.close());
+  let globalTimer; globalSearch?.addEventListener('input', () => { clearTimeout(globalTimer); globalTimer = setTimeout(searchAll, 100); });
+  searchDialog?.addEventListener('click', e => { if (e.target === searchDialog && (e.clientX < searchDialog.getBoundingClientRect().left || e.clientX > searchDialog.getBoundingClientRect().right || e.clientY < searchDialog.getBoundingClientRect().top || e.clientY > searchDialog.getBoundingClientRect().bottom)) searchDialog.close(); });
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && searchDialog) { e.preventDefault(); if (!searchDialog.open) searchDialog.showModal(); globalSearch.focus(); searchAll(); }
+    if (!searchDialog?.open) return;
+    const links = [...globalResults.querySelectorAll('a')]; const current = links.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' && links.length) { e.preventDefault(); links[Math.min(current + 1, links.length - 1)].focus(); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); if (current <= 0) globalSearch.focus(); else links[current - 1].focus(); }
+    if (e.key === 'Enter' && document.activeElement === globalSearch && links.length) { e.preventDefault(); links[0].click(); }
+  });
+  if ($('[data-post-grid]')) {
+    const setView = view => { $('[data-post-grid]').dataset.view = view; $$('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === view))); };
+    if ($('[data-view]')) setView(storage.get('studybase.archive-view', 'grid'));
+    $$('[data-view]').forEach(b => b.addEventListener('click', () => { setView(b.dataset.view); storage.set('studybase.archive-view', b.dataset.view); }));
+  }
+  const article = document.body.dataset.page === 'article' ? $('.public-article') : null;
   if (article) {
+    let font = Number(storage.get('studybase.font', '0')) || 0;
+    const setFont = () => { article.style.setProperty('--reading-size', `${(innerWidth <= 600 ? 15 : 16) + font}px`); };
+    $$('[data-font]').forEach(b => b.addEventListener('click', () => { font = Math.max(-2, Math.min(4, font + Number(b.dataset.font))); setFont(); storage.set('studybase.font', String(font)); }));
+    setFont(); addEventListener('resize', setFont);
+    const zoom = document.createElement('dialog'); zoom.className = 'figure-dialog'; zoom.setAttribute('aria-label', '그림 크게 보기');
+    const top = document.createElement('div'); top.className = 'dialog-top';
+    const zoomTitle = document.createElement('span'); zoomTitle.textContent = '그림 크게 보기';
+    const close = document.createElement('button'); close.type = 'button'; close.textContent = '닫기 · Esc'; close.addEventListener('click', () => zoom.close());
+    const zoomImg = document.createElement('img'), caption = document.createElement('p'); top.append(zoomTitle, close); zoom.append(top, zoomImg, caption); document.body.append(zoom);
+    article.querySelectorAll('img').forEach(img => {
+      img.dataset.zoomable = ''; img.tabIndex = 0; img.setAttribute('role', 'button'); img.setAttribute('aria-label', (img.alt || '논문 그림') + ' 크게 보기');
+      const open = () => { zoomImg.src = img.currentSrc || img.src; zoomImg.alt = img.alt; caption.textContent = img.closest('figure')?.querySelector('figcaption')?.textContent || img.alt; zoom.showModal(); close.focus(); };
+      img.addEventListener('click', e => { e.preventDefault(); open(); }); img.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    });
+    zoom.addEventListener('click', e => { if (e.target === zoom) zoom.close(); });
+    article.querySelectorAll('pre').forEach(pre => { const wrapper = document.createElement('div'); wrapper.className = 'code-wrap'; pre.before(wrapper); wrapper.append(pre); const copy = document.createElement('button'); copy.className = 'copy-code'; copy.textContent = '복사'; copy.type = 'button'; copy.addEventListener('click', async () => { try { await navigator.clipboard.writeText(pre.textContent); toast('코드를 복사했어요.'); } catch { toast('코드를 선택해서 복사해 주세요.'); } }); wrapper.append(copy); });
     const bar = $('[data-reading-progress]'), label = $('[data-progress-label]');
     let scheduled = false;
     const progress = () => { const start = article.getBoundingClientRect().top + scrollY - 100; const length = Math.max(1, article.offsetHeight - innerHeight + 150); const value = Math.max(0, Math.min(1, (scrollY - start) / length)); if (bar) bar.style.transform = `scaleX(${value})`; if (label) label.textContent = `${Math.round(value * 100)}%`; scheduled = false; };
