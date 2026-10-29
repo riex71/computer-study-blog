@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DeepSeek Engram의 N-gram 메모리 조회와 문맥 기반 게이트를 이해하고, MoE와의 비교 실험 및 대화 기억·RAG와의 차이를 살펴봅니다.">
+  <meta name="theme-color" content="#f7f7f3">
+  <meta property="og:title" content="AI도 암기와 사고를 나눠야 할까? DeepSeek Engram">
+  <meta property="og:description" content="계산할 것과 찾아올 것을 나누는 조건부 메모리, Engram을 읽다.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://riex71.github.io/computer-study-blog/posts/engram-conditional-memory.html">
+  <title>AI도 암기와 사고를 나눠야 할까? DeepSeek Engram — Studybase</title>
+  <link rel="canonical" href="https://riex71.github.io/computer-study-blog/posts/engram-conditional-memory.html">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="engram.css">
+</head>
+<body class="public-article-page">
+  <header class="article-topbar">
+    <a class="brand" href="../index.html" aria-label="Studybase 홈"><span class="brand-mark">S</span><span>STUDYBASE</span></a>
+    <a class="article-back" href="../index.html">← 모든 노트</a>
+  </header>
+
+  <main class="article-layout">
+    <header class="article-header">
+      <span class="topic-badge">논문 리뷰</span>
+      <h1>AI도 암기와 사고를 나눠야 할까? DeepSeek Engram</h1>
+      <p class="article-deck">익숙한 패턴까지 매번 계산해야 할까. 계산할 것과 찾아올 것을 나누는 조건부 메모리를 살펴본다.</p>
+      <div class="article-meta"><span>윤동현</span><time datetime="2026-10-29">2026.10.29</time><span>Engram · Conditional Memory · MoE</span></div>
+    </header>
+
+    <article class="public-article">
+      <p>구구단을 쓸 때마다 덧셈부터 다시 시작하지는 않는다. 익숙한 결과는 꺼내 쓰고, 계산이 필요한 부분에 시간을 쓴다. AI 모델에도 이런 역할 분담을 설계할 수 있을까? 이 비유를 출발점으로 Engram을 읽어보자. 사람의 기억과 모델의 메커니즘이 같다는 뜻은 아니다.</p>
+
+      <h2>1. 한 문장으로 이해하는 Engram</h2>
+      <p><strong>Engram은 학습한 N-gram 임베딩을 조회해 Transformer를 보완하는 조건부 메모리 모듈이다.</strong> 베이징대·DeepSeek 연구진이 2026년 1월 12일 공개했다. 이 글의 수치는 개정판 v2의 본문 표를 기준으로 한다. <a href="https://arxiv.org/abs/2601.07372v2" target="_blank" rel="noopener noreferrer">논문과 공개 이력</a></p>
+
+      <h2>2. 어떤 문제를 바꾸려는가</h2>
+      <p>연구진의 가설은 익숙한 지역 패턴을 재구성하는 계산 일부를 조회로 넘기면, 복잡한 추론에 모델의 표현 능력을 더 쓸 수 있다는 것이다. <strong>MoE의 조건부 계산과 Engram의 조건부 메모리를 결합</strong>한다. <a href="https://arxiv.org/html/2601.07372v2#S1" target="_blank" rel="noopener noreferrer">§1</a></p>
+      <blockquote>공부할 질문은 “더 큰 모델인가?”에서 한 걸음 더 간다. 같은 자원을 무엇을 계산하고 무엇을 저장하는 데 배분할 것인가?</blockquote>
+
+      <h2>3. 입력에서 메모리를 읽는 과정</h2>
+      <p>N-gram은 연속된 N개 토큰의 묶음이다. Engram은 토큰 ID를 정규화한 뒤, 여러 해시로 메모리를 조회한다. 현재 은닉 상태를 이용한 게이트가 조회 벡터의 반영량을 조절하고, 짧은 convolution을 거쳐 본체에 합친다. <a href="https://arxiv.org/html/2601.07372v2#S2" target="_blank" rel="noopener noreferrer">§2</a></p>
+      <figure class="engram-flow">
+        <ol aria-label="Engram의 조회 및 결합 흐름">
+          <li><span>01 · KEY</span><strong>지역 토큰 묶음</strong><small>N-gram 구성 · 정규화</small></li>
+          <li><span>02 · LOOKUP</span><strong>메모리 조회</strong><small>여러 해시 → 임베딩</small></li>
+          <li><span>03 · GATE</span><strong>문맥으로 조절</strong><small>현재 은닉 상태 활용</small></li>
+          <li><span>04 · FUSION</span><strong>본체에 결합</strong><small>convolution · residual</small></li>
+        </ol>
+        <figcaption>§2를 바탕으로 직접 구성한 개념도. 정적 주소 조회와 문맥에 따른 반영을 구분해 보자.</figcaption>
+      </figure>
+
+      <h2>4. 결과는 비교 조건과 함께 읽기</h2>
+      <p>Table 1의 MoE-27B와 Engram-27B는 총 26.7B, 활성 3.8B 파라미터이며 각각 262B 토큰을 학습했다. Engram은 expert 일부를 5.7B 메모리로 재배분했다. <a href="https://arxiv.org/html/2601.07372v2#S4" target="_blank" rel="noopener noreferrer">§4 · Table 1</a></p>
+      <div class="engram-table-wrap" tabindex="0" role="region" aria-label="MoE와 Engram 벤치마크 비교, 가로 스크롤 가능">
+        <table class="engram-table">
+          <caption>Table 1에서 발췌. 점수는 %, 차이는 %p이며 과제별 평가 설정은 원문을 따른다.</caption>
+          <thead><tr><th scope="col">벤치마크 · 지표</th><th scope="col">MoE-27B</th><th scope="col">Engram-27B</th><th scope="col">차이</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">MMLU · Acc.</th><td>57.4</td><td>60.4</td><td>+3.0</td></tr>
+            <tr><th scope="row">BBH · EM</th><td>50.9</td><td>55.9</td><td>+5.0</td></tr>
+            <tr><th scope="row">HumanEval · Pass@1</th><td>37.8</td><td>40.8</td><td>+3.0</td></tr>
+            <tr><th scope="row">MATH · EM</th><td>28.3</td><td>30.7</td><td>+2.4</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>이 표를 볼 때는 “메모리를 붙이니 좋아졌다”와 “다른 방식으로 같은 자원을 배분하니 좋아졌다”를 구별해야 한다. 후자가 이 비교에서 살펴볼 질문이다. 특정 벤치마크의 개선이 모든 실제 업무의 개선을 보장하지도 않는다.</p>
+
+      <h2>5. GPU 밖에 두면 공짜일까</h2>
+      <p>조회 주소를 미리 알 수 있어 호스트 메모리에서 prefetch할 수 있다. Table 4는 H800·512개 시퀀스 조건에서 100B 테이블 offload의 처리량 감소가 최대 약 2.8%였다고 보고한다. <strong>O(1) 조회가 전송 시간까지 없앤다는 뜻은 아니다.</strong> <a href="https://arxiv.org/html/2601.07372v2#S6.SS4" target="_blank" rel="noopener noreferrer">§6.4</a></p>
+
+      <h2>6. RAG, 대화 기억, Mamba와 나란히 보기</h2>
+      <p>“기억”이라는 단어만으로 기술을 묶으면 무엇을 저장하고 읽는지가 흐려진다. 원리의 위치를 기준으로 비교해 보자.</p>
+      <ul>
+        <li><strong>Engram:</strong> 학습된 임베딩을 읽는 모델 구성 요소다. 사용자의 지난 대화를 자동 보관하는 기능으로 해석하면 안 된다.</li>
+        <li><strong>RAG:</strong> 원 논문은 검색기로 위키피디아 문서 구절을 찾아 생성에 활용한다. 문서 검색과 모델 내부 임베딩 조회는 다른 설계다. <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer">RAG 원 논문</a></li>
+        <li><strong>Mamba:</strong> 입력에 따라 상태를 갱신하는 시퀀스 모델이다. <a href="mamba-selective-ssm.html">앞선 Mamba 글</a>과 비교할 때는 현재 시퀀스의 상태와 학습된 패턴 테이블을 구별하면 좋다. <a href="https://arxiv.org/abs/2312.00752" target="_blank" rel="noopener noreferrer">Mamba 원 논문</a></li>
+      </ul>
+      <p>이들은 같은 문제의 점수표에서 승자를 고르는 세 후보가 아니다. 문서를 제공할지, 과거 입력을 상태에 압축할지, 학습된 패턴을 읽을지처럼 서로 다른 설계 질문에 놓여 있다.</p>
+
+      <h2>7. 다음에 직접 확인할 것</h2>
+      <p>이 글의 해석은 “암기와 사고의 완전한 분리”보다 <strong>계산과 저장에 자원을 어떻게 나눌지</strong>에 가깝다. 다음 공부에서는 아래 질문을 확인해 보고 싶다.</p>
+      <ul>
+        <li>메모리 용량을 늘릴 때 품질과 지연 시간은 각각 어떻게 바뀔까?</li>
+        <li>같은 토큰 묶음도 문맥이 달라지면 게이트 값이 달라질까?</li>
+        <li>한국어 토큰 분할 방식에서도 비슷한 이점을 얻을까?</li>
+        <li>개인 장비에서 재현하려면 RAM·전송 대역폭·배치 크기를 어떻게 통제해야 할까?</li>
+      </ul>
+      <p><a href="https://github.com/deepseek-ai/Engram" target="_blank" rel="noopener noreferrer">공식 저장소</a>의 데모는 데이터 흐름을 이해하기 위한 코드다. Attention·MoE 등 일부 구성 요소를 모사하므로, 데모 실행을 논문의 학습·성능 재현으로 볼 수는 없다.</p>
+
+      <section class="article-sources" aria-labelledby="sources-heading">
+        <h2 id="sources-heading">참고 자료</h2>
+        <ul>
+          <li><a href="https://arxiv.org/html/2601.07372v2" target="_blank" rel="noopener noreferrer">Cheng et al. — Conditional Memory via Scalable Lookup: A New Axis of Sparsity for Large Language Models, v2</a> · 구조: §2, 비교: Table 1, offload: Table 4.</li>
+          <li><a href="https://github.com/deepseek-ai/Engram" target="_blank" rel="noopener noreferrer">DeepSeek-AI — Engram 공식 저장소</a> · 구현 개요 및 데모의 범위.</li>
+          <li><a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer">Lewis et al. — Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</a>.</li>
+          <li><a href="https://arxiv.org/abs/2312.00752" target="_blank" rel="noopener noreferrer">Gu &amp; Dao — Mamba: Linear-Time Sequence Modeling with Selective State Spaces</a>.</li>
+        </ul>
+        <p>Engram 원 논문은 <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>로 공개되어 있다. 이 글은 원문의 번역이 아닌 해설이며, 표는 일부 항목을 발췌하고 차이를 계산했으며 개념도는 직접 구성했다.</p>
+      </section>
+    </article>
+  </main>
+</body>
+</html>
