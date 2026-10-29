@@ -5,3 +5,5 @@
 - turndown 7.2.4: https://www.npmjs.com/package/turndown/v/7.2.4 — license: MIT. Vendored from its official npm release.
 
 Source headers and license files are retained. No runtime CDN is used.
+
+- KaTeX 0.19.1: https://github.com/KaTeX/KaTeX — MIT. Official npm archive integrity (SHA-512) verified; renderer, stylesheet and fonts are vendored locally.

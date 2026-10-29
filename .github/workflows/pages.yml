@@ -23,7 +23,7 @@ jobs:
         run: |
           python3 scripts/build.py
           python3 scripts/check.py
-          node --test tests/publisher.test.mjs
+          node --test tests/*.test.*
           python3 scripts/package.py
       - uses: actions/upload-pages-artifact@v4
         with:
