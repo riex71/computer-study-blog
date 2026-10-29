@@ -2,37 +2,54 @@
 
 원 논문의 구조와 실험 조건을 읽고 정리하는 한국어 AI 공부 블로그입니다.
 
-사이트: https://riex71.github.io/computer-study-blog/
+[공개 블로그](https://riex71.github.io/computer-study-blog/) · [글쓰기](https://riex71.github.io/computer-study-blog/write.html)
 
-## 공개 블로그
+## 읽기
 
-- 논문 이미지와 실제 글을 중심으로 구성한 홈과 아카이브
-- 제목·태그·본문 통합 검색, 주제 필터, 정렬
-- 브라우저에 보관되는 읽기 목록과 라이트/다크 테마
-- 글별 목차, 읽기 진행률, 링크 복사, 이어 읽기
-- 모바일 화면, 키보드 탐색, JavaScript 없는 환경에서도 읽을 수 있는 정적 본문
-- RSS(`feed.xml`), 사이트맵(`sitemap.xml`), canonical·Open Graph·JSON-LD 메타데이터
+홈의 최근 글과 읽기 가이드, 별도 아카이브의 본문 검색·주제 필터·정렬·카드/목록 전환을 제공합니다. 공개 페이지 어디에서든 Ctrl/Command K로 검색합니다. 글에는 목차·진행률·그림 확대·글자 크기·링크 및 코드 복사가 있습니다. 공개 본문은 JavaScript 없이 읽을 수 있습니다. RSS, 사이트맵, canonical, Open Graph, BlogPosting 메타데이터를 생성합니다.
 
-## 개인 공부 노트
+## 브라우저에서 작성하고 수정하기
 
-기존 노트 앱은 `notes.html`에서 사용합니다. 저장 키는 기존과 같은 `studybase.notes.v1`이므로 같은 브라우저·같은 사이트 주소의 기존 데이터가 유지됩니다. `studybase.theme`은 테마, `studybase.reading.v1`은 읽기 목록에 사용합니다.
+1. 블로그 아래의 ‘글쓰기’를 엽니다. 새 글을 쓰거나 공개된 글을 불러옵니다.
+2. 제목·소개·본문을 쓰고 ‘글 정보’에서 주소·날짜·주제·태그를 정합니다. Markdown과 정제된 HTML을 지원합니다. `##`로 소제목을 작성합니다. 볼드 강조는 출력하지 않습니다.
+3. ‘그림 첨부’로 PNG/JPG/WebP를 넣습니다. 그림 설명과 출처를 작성합니다. 파일당 5MB까지 지원합니다. 글 주소를 정한 뒤 첨부하며, 첨부 후 주소는 고정됩니다.
+4. 임시 원고와 그림은 이 브라우저의 IndexedDB에 자동 저장합니다. ‘원고 내려받기’의 JSON 파일을 다른 기기에서 불러올 수 있습니다. 임시 글이 서버에 동기화되는 것은 아닙니다.
+5. 게시하려면 GitHub fine-grained 토큰으로 연결합니다. Resource owner는 riex71, 저장소는 computer-study-blog 하나만 선택하고 Contents를 Read and write로 설정합니다. 토큰은 페이지 메모리에만 보관합니다. 새로고침하거나 연결을 해제하면 지워집니다. 토큰을 채팅·원고·커밋에 넣지 않습니다.
+6. ‘게시 준비’에서 제목과 공개 주소를 확인한 뒤 ‘게시’를 누릅니다. 원고·그림·메타데이터를 하나의 커밋으로 저장합니다. GitHub Actions가 블로그를 생성·검증·배포합니다. 화면에 원고 저장과 실제 배포 완료를 구분해 표시합니다.
 
-노트와 읽기 목록은 해당 브라우저의 localStorage에 저장되며 기기 간 자동 동기화는 제공하지 않습니다. 노트 화면의 내보내기/가져오기로 백업할 수 있습니다. 공개 글은 저장소의 HTML 파일로 관리합니다.
+기존 글은 주소를 유지합니다. 다른 곳에서 본문이나 글 정보가 바뀌면 게시를 중단하고 충돌을 알립니다. 이 경우 원고를 내려받아 보관하고 해당 임시 글을 삭제한 다음 최신 공개 원고를 불러와 변경을 옮깁니다. 브랜치를 강제로 갱신하지 않습니다.
 
-## 글 추가 및 재생성
+브라우저 편집기는 GitHub API를 사용하고, 공개 글은 GitHub Pages의 정적 HTML로 배포하는 구조입니다. 별도 서버 프로그램이나 토큰 없는 소셜 로그인은 포함하지 않습니다. 세션이 끝나면 GitHub에 다시 연결해야 합니다.
 
-1. `posts/`에 글 HTML을 추가합니다. 본문은 `<article class="public-article">` 안에 작성합니다. 이미지와 출처도 함께 넣습니다.
-2. `content/posts.json`에 제목·slug·날짜·주제·태그·요약·썸네일을 등록합니다. 첫 번째 항목이 홈의 대표 글입니다.
-3. `python3 scripts/build.py`를 실행합니다. 홈·글 공통 화면·검색 인덱스·RSS·사이트맵을 갱신합니다.
-4. `python3 scripts/check.py`로 링크와 파일을 확인합니다.
-5. 생성된 결과를 함께 커밋해 `main`에 반영하면 기존 GitHub Pages 배포가 적용됩니다.
+## 소스와 자동 배포
 
-별도의 npm 설치나 서버 데이터베이스는 필요하지 않습니다. `templates/home.html`은 홈의 원본이며 `index.html`은 생성된 결과입니다. 디자인과 기능은 `blog.css`, `reader.css`, `blog.js`에서 관리합니다. 개인 노트의 `styles.css`와 `script.js`는 별도로 유지합니다.
+- `content/posts.json`: 글 메타데이터
+- `content/articles/<slug>.md`: 편집할 Markdown 원고
+- `content/articles/<slug>.html`: 동일 원고의 정제된 HTML. Python 빌드는 이 파일을 사용합니다.
+- `posts/<slug>.html`, `index.html`, `archive.html`, `series.html`: 생성된 공개 화면
+- `templates/home.html`, `blog.css`, `reader.css`, `blog.js`: 공통 디자인과 읽기 기능
+- `write.html`, `writer.mjs`, `writer.css`, `editor-content.js`, `publisher.mjs`: 브라우저 편집기
+- `.github/workflows/pages.yml`: main 변경 시 빌드·검증 후 Pages 배포
 
-## 로컬 확인
+브라우저 편집기를 사용하면 Markdown과 HTML을 함께 저장합니다. 소스를 직접 고칠 때도 두 파일을 함께 갱신해야 다음 편집에서 변경을 잃지 않습니다. 생성된 `posts/*.html`을 원본으로 편집하지 않습니다.
 
-저장소 루트에서 `python3 -m http.server 8000`을 실행하고 브라우저로 http://localhost:8000/ 을 엽니다. 파일을 직접 열어도 글을 읽을 수 있지만, 전체 본문 검색에는 HTTP 서버가 필요합니다.
+```sh
+python3 scripts/build.py
+python3 scripts/check.py
+python3 scripts/package.py
+node --test tests/publisher.test.mjs
+```
 
-## 그림 출처
+빌드에는 Python 표준 라이브러리만 필요합니다. 게시 API 회귀 검사는 Node.js 22 이상에서 실행합니다. `package.py`는 공개 파일만 `_site/`에 모읍니다. 배포 시 `build.json`에 원본 커밋을 기록해 작성 화면에서 배포 완료를 확인합니다. 워크플로에는 Pages 쓰기·OIDC 권한과 Contents 읽기 권한만 부여합니다.
 
-Engram 논문의 원본 그림은 CC BY 4.0에 따라 출처를 표시했습니다. 상세 정보는 `assets/engram/ATTRIBUTION.md`와 각 그림의 캡션에 있습니다. `assets/mamba-state.svg`는 상태 갱신을 설명하기 위해 직접 작성한 개념도입니다.
+로컬에서는 저장소 루트에서 `python3 -m http.server 8000`을 실행해 http://localhost:8000/ 을 엽니다. GitHub 쓰기 테스트는 별도 브랜치에서 진행하세요.
+
+## 개인 공부 노트와 저장소
+
+기존 노트 앱은 `notes.html`에서 계속 사용합니다. 저장 키 `studybase.notes.v1`을 유지합니다. 테마는 `studybase.theme`, 읽기 목록은 `studybase.reading.v1`이며, 임시 글의 IndexedDB `studybase.writer.v1`과 별개입니다. 개인 노트·읽기 목록·임시 글은 해당 브라우저에 저장되므로 기기 간 이전 시 내보내기/가져오기를 사용합니다.
+
+## 그림과 외부 라이브러리
+
+Engram 원본 그림은 CC BY 4.0에 따라 출처를 표시했습니다. `assets/engram/ATTRIBUTION.md`와 각 그림 캡션에 세부 정보가 있습니다. `assets/mamba-state.svg`는 직접 작성한 개념도입니다.
+
+브라우저 편집기의 marked와 DOMPurify는 `assets/vendor/`에 버전을 고정해 포함했습니다. 외부 CDN에서 실행 코드를 가져오지 않습니다. Turndown은 기존 원고 변환에 사용했습니다. 라이선스와 버전은 `assets/vendor/THIRD_PARTY.md`에 있습니다.

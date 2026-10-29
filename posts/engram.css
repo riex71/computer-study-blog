@@ -1,7 +1,7 @@
 .engram-article-page .article-layout { max-width: 920px; }
 .engram-article-page .article-header h1 { font-weight: 400; }
 .engram-article-page .public-article h2 { margin-top: 3em; font-weight: 400; scroll-margin-top: 90px; }
-.engram-article-page .public-article p, .engram-article-page .public-article li { font-size: 16px; line-height: 2; font-weight: 400; word-break: normal; overflow-wrap: break-word; }
+.engram-article-page .public-article p, .engram-article-page .public-article li { font-size: var(--reading-size, 16px); line-height: 2; font-weight: 400; word-break: normal; overflow-wrap: break-word; }
 .engram-article-page .public-article p { margin-bottom: 1.65em; }
 .engram-article-page .public-article strong, .engram-article-page .public-article b { font-weight: 400; }
 .engram-article-page .public-article .engram-editor-note { padding: 18px 20px; border-left: 2px solid var(--line-strong); color: var(--muted); font-size: 13px; line-height: 1.9; }
