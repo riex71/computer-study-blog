@@ -3,7 +3,8 @@ const { DraftStore, draftVersion } = await import('./draft-store.mjs' + new URL(
 const $ = s => document.querySelector(s);
 const fields = ['title','description','slug','date','category','topics','tags','thumbnail','thumbnail-alt','thumbnail-credit','thumbnail-source'];
 const initialParams = new URLSearchParams(location.search);
-const requestedEdit = initialParams.get('edit'), requestedDraft = initialParams.get('draft');
+const requestedEdit=initialParams.get('edit'),requestedDraft=initialParams.get('draft'),requestedNew=initialParams.get('new')==='1';
+let returnToReview=false;
 let editorReady=false;
 let draft, drafts = [], posts = [], publisher, busy = false, pending = 0, storageFailed = false, pollTimer, deploymentEpoch=0, saveQueue=Promise.resolve();
 const versions=new Map(),aliases=new Map(),unsaved=new Map(),draftStore=new DraftStore();
@@ -16,6 +17,18 @@ const message = text => {
 let previewTimer;
 const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
 const split = value => [...new Set(value.split(',').map(s => s.trim()).filter(Boolean))].slice(0, 20);
+function closeDialog(id){const dialog=$('#'+id);if(dialog?.open)dialog.close();}
+function openDialog(id){for(const dialog of document.querySelectorAll('dialog[open]'))if(dialog.id!==id)dialog.close();const dialog=$('#'+id);if(!dialog.open)dialog.showModal();}
+function setMode(mode){mode=mode==='preview'?'preview':'edit';$('.editor-panes').dataset.mode=mode;$('.writing-desk').dataset.mode=mode;document.querySelectorAll('button[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));}
+function ensureSlug(force=false){
+  if(!$('#post-slug').value&&!draft.original&&!draft.images.length&&($('#post-title').value.trim()||force))$('#post-slug').value=$('#post-title').value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,80).replace(/-$/,'')||'note-'+today().replace(/-/g,'')+'-'+draft.id.slice(0,6);
+}
+function updateContext(){
+  const editing=!!draft.original;$('#writer-context').textContent=editing?'공개 글 수정':'새 글';
+  $('#review-button').textContent=editing?'수정 반영':'게시';$('#review-title').textContent=editing?'수정 내용 반영':'게시하기';$('#publish-button').textContent=editing?'반영하기':'게시하기';
+  $('#writer-return').href=editing?'posts/'+draft.post.slug+'.html':'index.html';$('#writer-return').textContent=editing?'← 글로 돌아가기':'← 블로그';
+  $('#reload-published').hidden=!editing;$('#reload-published-note').hidden=!editing;document.title=(draft.post.title||'글쓰기')+' — Studybase';
+}
 function blank() {
   return { id: crypto.randomUUID(), post: { title:'', description:'', deck:'', shortTitle:'', slug:'', date:today(), category:'논문 리뷰', topics:[], tags:[], thumbnail:'assets/social-cover.png', thumbnailAlt:'', thumbnailCredit:'', thumbnailSource:'' }, markdown:'', images:[], original:null, savedAt:new Date().toISOString() };
 }
@@ -29,6 +42,7 @@ function collect() {
   p.topics = split($('#post-topics').value); p.tags = split($('#post-tags').value);
   for (const [key, id] of [['thumbnailAlt','thumbnail-alt'],['thumbnailCredit','thumbnail-credit'],['thumbnailSource','thumbnail-source']]) p[key] = $('#post-' + id).value.trim();
   draft.markdown = $('#markdown-editor').value;
+  draft.position={start:$('#markdown-editor').selectionStart,end:$('#markdown-editor').selectionEnd,scroll:$('#markdown-editor').scrollTop};
   draft.savedAt = new Date().toISOString();
 }
 function renderPreview() {
@@ -68,7 +82,7 @@ async function save(){
       versions.set(record.id,draftVersion(record));remember(record);
       if(draft.id===record.id)draft.revision=record.revision;
       unsaved.delete(record.id);unsaved.delete(snapshot.id);unsaved.delete(sourceId);storageFailed=unsaved.size>0;
-      if(draft.id===record.id)$('#draft-status').textContent=pending===1?'이 브라우저에 저장됨 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'임시 저장 중…';
+      if(draft.id===record.id)$('#draft-status').textContent=pending===1?'저장됨 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'임시 저장 중…';
       renderDrafts();channel?.postMessage({type:'saved',id:record.id});
     }catch{
       unsaved.set(snapshot.id,snapshot);remember(snapshot);storageFailed=true;renderDrafts();$('#draft-status').textContent='저장 실패 · 원고를 내려받아 주세요.';
@@ -80,25 +94,26 @@ async function save(){
 function fill(next) {
   clearTimeout(previewTimer);clearTimeout(pollTimer);deploymentEpoch++;draft = structuredClone(next); const p = draft.post;
   const stored=drafts.find(d=>d.id===draft.id);if(stored&&!unsaved.has(draft.id))versions.set(draft.id,draftVersion(next));
-  $('#draft-status').textContent=unsaved.has(draft.id)?'저장 실패 · 원고를 내려받아 주세요.':stored?'이 브라우저에 저장된 원고':'새 글 · 작성하면 자동 저장됩니다.';
+  $('#draft-status').textContent=unsaved.has(draft.id)?'저장 실패 · 원고를 내려받아 주세요.':stored?'저장된 원고':'자동 저장';
   draft.markdown = EditorContent.normalizeLegacy(draft.markdown, draft.original?.html);
   if (location.protocol !== 'file:') history.replaceState(null, '', location.pathname + '?draft=' + encodeURIComponent(draft.id));
   for (const key of ['title','description','slug','date','category','thumbnail']) $('#post-' + key).value = p[key] || '';
   $('#post-topics').value = p.topics.join(', '); $('#post-tags').value = p.tags.join(', ');
   for (const [key, id] of [['thumbnailAlt','thumbnail-alt'],['thumbnailCredit','thumbnail-credit'],['thumbnailSource','thumbnail-source']]) $('#post-' + id).value = p[key] || '';
   $('#post-slug').disabled = !!draft.original || !!draft.images.length;
-  $('#markdown-editor').value=draft.markdown;renderPreview();renderDrafts();renderDeployment();message('');
+  $('#markdown-editor').value=draft.markdown;setMode('edit');updateContext();closeDialog('library-dialog');renderPreview();renderDrafts();renderDeployment();message('');
+  const position=draft.position||{start:0,end:0,scroll:0};$('#markdown-editor').setSelectionRange(position.start||0,position.end||0);$('#markdown-editor').scrollTop=position.scroll||0;
   if(draft.deployment?.status!=='published'&&draft.deployment)watchDeployment({...draft.deployment,draftId:draft.id,post:draft.original?.post,html:draft.original?.html,markdown:draft.original?.markdown},0,deploymentEpoch);
 }
 function lockEditor(){
-  const controls=[...document.querySelectorAll('.writing-desk input,.writing-desk textarea,.writing-desk button,.writer-sidebar input,.writer-sidebar select,.writer-sidebar button,#review-button')];
+  const controls=[...document.querySelectorAll('.writing-desk input,.writing-desk textarea,.writing-desk button,.writer-sidebar input,.writer-sidebar select,.writer-sidebar button,.writer-header button,#settings-dialog input,#settings-dialog textarea')];
   const previous=controls.map(c=>c.disabled);controls.forEach(c=>c.disabled=true);
   return ()=>controls.forEach((c,i)=>c.disabled=previous[i]);
 }
 async function activateDraft(next){
   if(busy)return;busy=true;const unlock=lockEditor();
   try{await save();const latest=drafts.find(d=>d.id===next.id)||next;aliases.delete(latest.id);fill(latest);}
-  finally{busy=false;unlock();renderDrafts();}
+  finally{busy=false;unlock();renderDrafts();$('#markdown-editor').focus();}
 }
 async function removeDraft(id){
   const entry=drafts.find(d=>d.id===id);if(!entry||busy||!confirm('이 브라우저의 임시 글을 삭제할까요? 공개된 글은 유지됩니다.'))return;
@@ -117,7 +132,7 @@ function renderDrafts(){
     if(!row){
       row=document.createElement('div');row.dataset.draftId=entry.id;
       const open=document.createElement('button');open.type='button';
-      open.addEventListener('click',()=>{const current=drafts.find(d=>d.id===row.dataset.draftId);if(!current||busy||(draft?.id===current.id&&JSON.stringify(draftVersion(current))===JSON.stringify(draftVersion(draft))))return;activateDraft(current);});
+      open.addEventListener('click',()=>{const current=drafts.find(d=>d.id===row.dataset.draftId);if(!current||busy)return;if(draft?.id===current.id&&JSON.stringify(draftVersion(current))===JSON.stringify(draftVersion(draft))){closeDialog('library-dialog');$('#markdown-editor').focus();return;}activateDraft(current);});
       const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.addEventListener('click',()=>removeDraft(row.dataset.draftId));row.append(open,remove);
     }
     row.className='draft-item'+(entry.id===draft?.id?' active':'');
@@ -131,15 +146,16 @@ async function publicFile(path) {
   const url = new URL(path, location.href); url.searchParams.set('v', Date.now());
   const res = await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(20000)}); if (!res.ok) throw Error('공개 원고를 불러오지 못했습니다. 배포가 끝난 뒤 다시 시도해 주세요.'); return res.text();
 }
-function populatePosts() {
-  const select = $('#published-post'); const selected = select.value; select.replaceChildren(new Option('수정할 글 선택', ''));
-  for (const post of posts) select.add(new Option(post.title, post.slug)); select.value=selected;select.disabled=busy||!posts.length;$('#load-post').disabled=busy||!posts.length;
+function populatePosts(){
+  const list=$('#published-list');list.replaceChildren();
+  for(const post of posts){const button=document.createElement('button');button.type='button';button.className='published-edit-button';button.dataset.editPost=post.slug;button.disabled=busy;const title=document.createElement('span'),label=document.createElement('span');title.textContent=post.title;label.textContent='수정';button.append(title,label);button.addEventListener('click',()=>{closeDialog('library-dialog');loadPost(post.slug)});list.append(button);}
+  if(!posts.length){const text=document.createElement('p');text.className='help';text.textContent='공개 글을 불러오는 중입니다.';list.append(text);}
 }
 async function loadPost(slug, force = false) {
   if (!slug || busy) return;
-  const existing = drafts.find(d => d.original?.post.slug === slug);
-  if (existing && !force) {if(draft?.id!==existing.id)await activateDraft(existing);message('이 글의 임시 원고를 이어 씁니다. 최신 공개 원고로 다시 시작하려면 임시 글을 먼저 내려받고 삭제해 주세요.');return;}
-  busy = true; $('#load-post').disabled = true; $('#new-post').disabled = true; $('.writing-desk').inert = true;
+  const existing=(draft.original?.post.slug===slug?draft:drafts.filter(d=>d.original?.post.slug===slug).sort((a,b)=>b.savedAt.localeCompare(a.savedAt))[0]);
+  if (existing && !force) {if(draft?.id!==existing.id)await activateDraft(existing);closeDialog('library-dialog');setMode('edit');$('#markdown-editor').focus();message('');return;}
+  busy=true;const unlock=lockEditor();$('#draft-status').textContent='원고 불러오는 중…';
   try {
     await save();
     let post, markdown, html;
@@ -152,13 +168,15 @@ async function loadPost(slug, force = false) {
       [markdown, html] = await Promise.all([publicFile(post.sourceMarkdown), publicFile(post.sourceHtml)]);
     }
     const next = blank(); next.post = structuredClone(post); next.markdown = markdown.trim(); next.original = { post:structuredClone(post), markdown, html };
-    fill(next); await save(); message('공개 원고를 불러왔습니다. 수정 사항은 게시 전까지 이 브라우저에만 저장됩니다.');
-  } catch (error) { message(error.message); } finally { busy = false; $('#load-post').disabled = false; $('#new-post').disabled=false;$('.writing-desk').inert=false;renderDrafts();}
+    fill(next); await save(); message('');
+  } catch (error) { message(error.message); } finally { busy=false;unlock();renderDrafts();populatePosts();$('#markdown-editor').focus();}
 }
 function validate() {
   collect(); const p = draft.post;
   if (!p.title) throw Error('글 제목을 적어주세요.');
-  if (!p.description) throw Error('목록에 표시할 소개를 적어주세요.');
+  if(!draft.markdown.trim())throw Error('본문을 작성해 주세요.');
+  ensureSlug(true);p.slug=$('#post-slug').value.trim();
+  if(!p.description){const root=document.createElement('div');root.innerHTML=EditorContent.compile(draft.markdown,draft.original?.html);const first=[...root.querySelectorAll('p')].find(p=>p.textContent.trim()&&!p.closest('figcaption,.article-sources'));p.description=(first?.textContent||root.textContent).replace(/\s+/g,' ').trim().slice(0,160);p.deck=p.description;$('#post-description').value=p.description;}
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(p.slug) || p.slug.length > 100) throw Error('글 정보에서 주소를 정해 주세요. 영문 소문자, 숫자, 하이픈을 쓸 수 있습니다.');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(p.date) || Number.isNaN(Date.parse(p.date))) throw Error('작성일을 확인해 주세요.');
   if (!draft.markdown.trim()) throw Error('본문을 작성해 주세요.');
@@ -172,32 +190,29 @@ function validate() {
   return html;
 }
 for (const key of fields) $('#post-' + key).addEventListener('input', () => { collect(); renderPreview(); save(); });
-$('#post-title').addEventListener('change', () => {
-  if (!$('#post-slug').value && !draft.original && !draft.images.length && $('#post-title').value.trim()) {
-    $('#post-slug').value = $('#post-title').value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80).replace(/-$/, '') || 'note-' + today().replace(/-/g, '') + '-' + draft.id.slice(0, 6);
-    save();
-  }
-});
-
+$('#post-title').addEventListener('change',()=>{ensureSlug();save();updateContext();});
 $('#markdown-editor').addEventListener('input', () => { collect();clearTimeout(previewTimer);previewTimer=setTimeout(renderPreview,100);save(); });
-$('#new-post').addEventListener('click',async()=>{if(busy)return;await activateDraft(blank());$('#post-title').focus();});
-$('#load-post').addEventListener('click', () => loadPost($('#published-post').value));
-for (const button of document.querySelectorAll('button[data-mode]')) button.addEventListener('click', () => {
-  document.querySelector('.editor-panes').dataset.mode = button.dataset.mode;
-  document.querySelectorAll('button[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
-});
+$('#new-post').addEventListener('click',async()=>{if(busy)return;closeDialog('library-dialog');await activateDraft(blank());$('#post-title').focus();});
+$('#open-library').addEventListener('click',()=>{if(!busy)openDialog('library-dialog')});
+$('#open-settings').addEventListener('click',()=>{if(!busy)openDialog('settings-dialog')});
+$('#manage-connection').addEventListener('click',()=>{returnToReview=false;openDialog('connect-dialog')});
+$('#pick-image').addEventListener('click',()=>$('#image-upload').click());
+$('#pick-import').addEventListener('click',()=>$('#import-draft').click());
+$('#reload-published').addEventListener('click',()=>{if(draft.original){closeDialog('settings-dialog');loadPost(draft.post.slug,true)}});
+document.querySelectorAll('[data-close-dialog]').forEach(button=>button.addEventListener('click',()=>closeDialog(button.dataset.closeDialog)));
 
+for(const button of document.querySelectorAll('button[data-mode]'))button.addEventListener('click',()=>{if(button.dataset.mode==='preview'){collect();renderPreview();}setMode(button.dataset.mode);});
 document.querySelectorAll('[data-insert]').forEach(button => button.addEventListener('click', () => {
   if (busy) return;
   const editor=$('#markdown-editor'), start=editor.selectionStart, end=editor.selectionEnd, selected=editor.value.slice(start,end);
   const snippets={heading:'\n\n## '+(selected||'소제목')+'\n\n',link:'['+(selected||'링크 설명')+'](https://example.com)',code:'\n\n```python\n'+(selected||'print("hello")')+'\n```\n\n',inlineMath:'$'+(selected||'x_t')+'$',blockMath:'\n\n$$\n'+(selected||'h_t = \\bar{A}h_{t-1} + \\bar{B}x_t')+'\n$$\n\n',table:'\n\n| 항목 | 값 |\n| --- | --- |\n| 예시 | 1 |\n\n'};
-  if(document.querySelector('.editor-panes').dataset.mode==='preview')document.querySelector('button[data-mode="edit"]').click();
+  setMode('edit');document.querySelector('.more-tools').open=false;
   editor.setRangeText(snippets[button.dataset.insert],start,end,'end');editor.focus();collect();renderPreview();save();
 }));
-$('#open-markdown-help').addEventListener('click',()=>{$('#markdown-help').open=true;});
+$('#open-markdown-help').addEventListener('click',()=>{document.querySelector('.more-tools').open=false;openDialog('help-dialog')});
 $('#image-upload').addEventListener('change', async event => {
-  const file = event.target.files[0]; event.target.value = ''; if (!file || busy) return; collect();
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(draft.post.slug)) { message('그림을 넣기 전에 ‘글 정보’에서 글 주소를 정해 주세요.'); $('.metadata-panel').open = true; $('#post-slug').focus(); return; }
+  const file=event.target.files[0];event.target.value='';if(!file||busy)return;ensureSlug(true);collect();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(draft.post.slug)) { message('그림을 넣기 전에 ‘글 정보’에서 글 주소를 정해 주세요.'); openDialog('settings-dialog');$('#post-slug').focus(); return; }
   if (!['image/png','image/jpeg','image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) { message('PNG, JPG, WebP 그림을 5MB 이하로 첨부해 주세요.'); return; }
   if (draft.images.reduce((n,i) => n + i.base64.length, 0) > 24 * 1024 * 1024) { message('이 원고의 그림 용량이 큽니다. 먼저 게시한 뒤 이어서 첨부해 주세요.'); return; }
   busy=true;const unlock=lockEditor();message('그림을 읽는 중입니다…');
@@ -215,7 +230,7 @@ $('#image-upload').addEventListener('change', async event => {
     draft.images.push({path,type:file.type,base64:btoa(binary)});
     const editor = $('#markdown-editor'), insert = '\n\n![그림 설명을 적어주세요](../' + path + ')\n\n그림 설명: 설명과 출처를 적어주세요.\n';
     editor.setRangeText(insert, editor.selectionStart, editor.selectionEnd, 'end');
-    $('#post-slug').disabled = true; collect(); renderPreview(); await save(); message('그림을 첨부했습니다. 그림 설명과 출처를 함께 적어주세요. 게시하면 이미지도 업로드됩니다.');
+    $('#post-slug').disabled = true; collect(); renderPreview(); await save(); message('그림을 첨부했습니다. 설명과 출처를 적어주세요.');
   } catch (error) { message(error.message || '그림을 불러오지 못했습니다.'); }
   finally{busy=false;unlock();$('#post-slug').disabled=!!draft.original||!!draft.images.length;renderDrafts();}
 });
@@ -232,7 +247,7 @@ $('#import-draft').addEventListener('change', async event => {
     if (data.format !== 'studybase-draft-v1' || !d?.post || typeof d.markdown !== 'string' || !Array.isArray(d.images) || !Array.isArray(d.post.topics) || !Array.isArray(d.post.tags)) throw Error('Studybase에서 내려받은 원고 파일을 선택해 주세요.');
     for (const key of ['title','description','slug','date','category','thumbnail']) if (typeof d.post[key] !== 'string') throw Error('원고 정보가 올바르지 않습니다.');
     for (const image of d.images) if (typeof image.path !== 'string' || typeof image.base64 !== 'string' || !['image/png','image/jpeg','image/webp'].includes(image.type) || !/^[a-zA-Z0-9+/=]+$/.test(image.base64)) throw Error('첨부 그림 정보가 올바르지 않습니다.');
-    d.id=crypto.randomUUID();delete d.revision;delete d.recoveredFrom;delete d.deployment;await activateDraft(d);await save();message('원고와 첨부 그림을 불러왔습니다.');
+    d.id=crypto.randomUUID();delete d.revision;delete d.recoveredFrom;delete d.deployment;await activateDraft(d);await save();closeDialog('library-dialog');message('원고를 불러왔습니다.');
   } catch (error) { message(error.message); }
 });
 $('#connect-form').addEventListener('submit', async event => {
@@ -243,7 +258,7 @@ $('#connect-form').addEventListener('submit', async event => {
   try {
     await candidate.connect(); publisher?.disconnect(); publisher = candidate;
     $('#connection-state').textContent = '연결됨'; $('#connect-form').hidden = true; $('#disconnect').hidden = false; $('#token-help').open = false;
-    message('GitHub 저장소에 연결했습니다. 게시 준비에서 최종 내용을 확인해 주세요.');
+    closeDialog('connect-dialog');if(returnToReview){returnToReview=false;$('#review-button').click();}else message('블로그에 연결했습니다.');
   } catch (error) { candidate.disconnect(); message(error.message); } finally { button.disabled = false; }
 });
 function disconnect() { publisher?.disconnect(); publisher = undefined; $('#github-token').value = ''; $('#connection-state').textContent = '연결 전'; $('#connect-form').hidden = false; $('#disconnect').hidden = true; }
@@ -256,11 +271,11 @@ $('#review-button').addEventListener('click', async () => {
     $('#publish-status').textContent = publisher ? '게시할 준비가 되었습니다.' : (unsaved.has(draft.id)?'GitHub 연결이 필요합니다. 임시 저장에도 실패했으니 원고 내려받기로 먼저 보관해 주세요.':'GitHub 연결을 먼저 완료해 주세요. 작성한 원고는 임시 저장되어 있습니다.');
     $('#review-connect').hidden = !!publisher;
     $('#publish-button').disabled = !publisher; $('#published-link').hidden = true; $('#deployment-link').hidden = true;
-    $('#publish-button').hidden = false; $('#review-dialog').showModal();
-  } catch (error) { message(error.message); $('.metadata-panel').open = true; }
+    $('#publish-button').hidden = false; openDialog('review-dialog');
+  }catch(error){message(error.message);if(!$('#post-title').value.trim()){setMode('edit');$('#post-title').focus();}else if(!$('#markdown-editor').value.trim()) {setMode('edit');$('#markdown-editor').focus();}else if($('#math-status').textContent){setMode('preview');}else openDialog('settings-dialog');}
 });
 $('#close-review').addEventListener('click', () => { if (!busy) $('#review-dialog').close(); });
-$('#review-connect').addEventListener('click', () => { $('#review-dialog').close(); $('#token-help').open = true; $('.connection-panel').scrollIntoView({block:'center'}); $('#github-token').focus({preventScroll:true}); });
+$('#review-connect').addEventListener('click',()=>{returnToReview=true;openDialog('connect-dialog');$('#github-token').focus()});
 $('#review-dialog').addEventListener('cancel', e => { if (busy) e.preventDefault(); });
 function renderDeployment(text){
   const deployment=draft?.deployment,note=$('#deployment-note');note.hidden=!deployment;if(!deployment)return;
@@ -303,27 +318,29 @@ $('#publish-button').addEventListener('click', async () => {
     await save(); const submitted = structuredClone(draft);
     const result = await publisher.publish(submitted, html, text => $('#publish-status').textContent = text);
     accepted=true;
-    draft.post = result.post; draft.original = {post:structuredClone(result.post),markdown:result.markdown,html:result.html};draft.deployment={sha:result.sha,url:result.url,status:'building'};
+    draft.post = result.post; draft.original = {post:structuredClone(result.post),markdown:result.markdown,html:result.html};draft.deployment={sha:result.sha,url:result.url,status:'building'};updateContext();
     await save(); $('#publish-status').textContent = '원고를 GitHub에 저장했습니다. 블로그를 배포하는 중입니다…';
     $('#publish-button').hidden = true; $('#deployment-link').href = 'https://github.com/riex71/computer-study-blog/actions'; $('#deployment-link').hidden = false;
     posts = posts.filter(p => p.slug !== result.post.slug); posts.unshift(result.post); populatePosts();renderDeployment();deploymentEpoch++;watchDeployment({...result,draftId:draft.id},0,deploymentEpoch);
   } catch (error) { $('#publish-status').textContent = error.message + '\n'+(storageFailed?'원고와 그림은 현재 화면에 남아 있습니다. 원고 내려받기로 보관해 주세요.':'원고와 그림은 이 브라우저에 남아 있습니다.'); }
-  finally {busy=false;controls.forEach((c,i)=>c.disabled=previous[i]);$('#post-slug').disabled=!!draft.original||!!draft.images.length;$('#publish-button').disabled=false;$('#close-review').disabled=false;renderDrafts();if(!accepted&&draft.deployment?.status==='building')watchDeployment({...draft.deployment,draftId:draft.id,post:draft.original?.post,html:draft.original?.html,markdown:draft.original?.markdown},0,deploymentEpoch);}
+  finally {busy=false;controls.forEach((c,i)=>c.disabled=previous[i]);$('#post-slug').disabled=!!draft.original||!!draft.images.length;$('#publish-button').disabled=false;$('#close-review').disabled=false;renderDrafts();populatePosts();if(!accepted&&draft.deployment?.status==='building')watchDeployment({...draft.deployment,draftId:draft.id,post:draft.original?.post,html:draft.original?.html,markdown:draft.original?.markdown},0,deploymentEpoch);}
 });
 addEventListener('beforeunload', event => { if (busy || pending || unsaved.size) { event.preventDefault(); event.returnValue = ''; } });
 try {drafts=await draftStore.list();for(const item of drafts)versions.set(item.id,draftVersion(item));} catch { storageFailed = true; message('브라우저 저장소를 사용할 수 없습니다. 원고 내려받기로 보관해 주세요.'); }
-const selectedDraft=requestedDraft?drafts.find(d=>d.id===requestedDraft):requestedEdit?drafts.find(d=>d.original?.post.slug===requestedEdit):drafts.sort((a,b)=>b.savedAt.localeCompare(a.savedAt))[0];
+const selectedDraft=requestedNew?null:requestedDraft?drafts.find(d=>d.id===requestedDraft):requestedEdit?drafts.filter(d=>d.original?.post.slug===requestedEdit).sort((a,b)=>b.savedAt.localeCompare(a.savedAt))[0]:drafts.sort((a,b)=>b.savedAt.localeCompare(a.savedAt))[0];
 fill(selectedDraft||blank());
 if(requestedDraft&&!selectedDraft&&!storageFailed)message('이 브라우저에 해당 임시 글이 없습니다. 다른 기기에서 작성했다면 내려받은 원고 파일을 불러와 주세요.');
 if(storageFailed){$('#draft-status').textContent='임시 저장 불가 · 원고를 내려받아 주세요.';message('브라우저 저장소를 사용할 수 없습니다. 원고 내려받기로 보관해 주세요.');}
 channel?.addEventListener('message',async event=>{try{await saveQueue;await refreshDrafts();if(event.data.id===draft?.id)message('다른 탭에서 이 임시 글이 변경되었습니다. 계속 작성하면 복사본으로 보관합니다.');}catch{}});
 function readyEditor(){
-  if(editorReady)return;editorReady=true;$('#writer-boot-lock').disabled=false;$('#writer-boot-lock').removeAttribute('aria-busy');$('#review-button').disabled=false;
-  $('#published-post').disabled=!posts.length;$('#load-post').disabled=!posts.length;
-  if(matchMedia('(max-width:800px)').matches)document.querySelector('button[data-mode="edit"]').click();
+  if(editorReady)return;editorReady=true;$('#writer-boot-lock').disabled=false;$('#writer-boot-lock').removeAttribute('aria-busy');$('#review-button').disabled=false;$('#open-library').disabled=false;$('#open-settings').disabled=false;
+  setMode('edit');
+  if(requestedEdit||requestedDraft)$('#markdown-editor').focus();else if(requestedNew)$('#post-title').focus();
 }
 if(!requestedEdit)readyEditor();else $('#draft-status').textContent='공개 원고를 불러오는 중…';
 try {
   posts = JSON.parse(await publicFile('content/posts.json')); populatePosts();
-  if (requestedEdit) { $('#published-post').value = requestedEdit; await loadPost(requestedEdit); }
+  if(requestedEdit)await loadPost(requestedEdit);
 }catch(error){message(error.message);}finally{readyEditor();}
+
+addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='s'&&editorReady&&!busy){event.preventDefault();save();}});

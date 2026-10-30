@@ -91,15 +91,12 @@
     if (e.key === 'ArrowUp') { e.preventDefault(); if (current <= 0) globalSearch.focus(); else links[current - 1].focus(); }
     if (e.key === 'Enter' && document.activeElement === globalSearch && links.length) { e.preventDefault(); links[0].click(); }
   });
-  if ($('[data-post-grid]')) {
-    const setView = view => { $('[data-post-grid]').dataset.view = view; $$('button[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === view))); };
-    if ($('button[data-view]')) setView(storage.get('studybase.archive-view', 'grid'));
-    $$('button[data-view]').forEach(b => b.addEventListener('click', () => { setView(b.dataset.view); storage.set('studybase.archive-view', b.dataset.view); }));
-  }
+  $$('.reader-popover').forEach(details=>details.addEventListener('toggle',()=>{if(details.open)$$('.reader-popover').filter(other=>other!==details).forEach(other=>other.open=false);}));
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'){const details=document.activeElement?.closest('.reader-popover');if(details?.open){details.open=false;details.querySelector('summary').focus();}}});
   const article = document.body.dataset.page === 'article' ? $('.public-article') : null;
   if (article) {
     let font = Number(storage.get('studybase.font', '0')) || 0;
-    const setFont = () => { article.style.setProperty('--reading-size', `${(innerWidth <= 600 ? 15 : 16) + font}px`); };
+    const setFont = () => { article.style.setProperty('--reading-size', `${(innerWidth <= 600 ? 16 : 17) + font}px`); };
     $$('[data-font]').forEach(b => b.addEventListener('click', () => { font = Math.max(-2, Math.min(4, font + Number(b.dataset.font))); setFont(); storage.set('studybase.font', String(font)); }));
     setFont(); addEventListener('resize', setFont);
     const zoom = document.createElement('dialog'); zoom.className = 'figure-dialog'; zoom.setAttribute('aria-label', '그림 크게 보기');

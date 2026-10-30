@@ -1,18 +1,7 @@
 <!doctype html>
-<html lang="ko"><head>{{HEAD}}</head>
-<body data-page="home"><a class="skip-link" href="#main">본문으로 건너뛰기</a>{{HEADER}}
+<html lang="ko"><head>{{HEAD}}</head><body data-page="home"><a class="skip-link" href="#main">본문으로 건너뛰기</a>{{HEADER}}
 <main id="main" class="site-main">
-  <section class="journal-intro" aria-labelledby="hero-title">
-    <div><p class="eyebrow">AI, PAPERS & CONNECTIONS</p><h1 id="hero-title">읽고, 이해하고,<br>연결하는 기록.</h1><p>모델은 어떻게 기억하고 계산할까.<br>논문의 구조와 실험을 그림과 함께 읽습니다.</p></div>
-    <div class="intro-index"><span class="eyebrow">STUDYBASE / 윤동현</span><p>새로운 모델보다<br>오래 남는 이해를 찾아서.</p><a href="series.html">처음 오셨다면, 이 순서로 ↗</a></div>
-  </section>
-  <div class="journal-columns">
-    <section id="archive" class="journal-feed" aria-labelledby="archive-heading"><div class="section-label"><h2 id="archive-heading">최근 공부 기록 <span class="quiet">{{COUNT}}편</span></h2><a href="archive.html">전체 아카이브 ↗</a></div><div class="post-grid home-posts">{{CARDS}}</div></section>
-    <aside class="journal-sidebar" aria-label="공부 길잡이">
-      <section id="study-map"><p class="eyebrow">START HERE</p><h2>‘기억’을 따라 읽기</h2><p>Mamba의 상태부터 Engram의 조회까지. 두 논문의 다른 설계를 한 줄로 연결합니다.</p><ol class="mini-path"><li><a href="posts/mamba-selective-ssm.html"><span>01 / 시퀀스와 상태</span>무엇을 기억하고 잊을까 ↗</a></li><li><a href="posts/engram-conditional-memory.html"><span>02 / 계산과 저장</span>무엇을 계산하고 찾아올까 ↗</a></li></ol><a class="text-link" href="series.html">읽기 가이드 보기 <span>↗</span></a></section>
-      <section class="sidebar-topics"><p class="eyebrow">BROWSE BY TOPIC</p><h2>관심 있는 개념부터</h2><div class="topic-links">{{TOPIC_LINKS}}</div></section>
-      <section class="rss-note"><p class="eyebrow">STAY IN THE LOOP</p><p>다음 공부 기록은 RSS로 받아보세요.</p><a href="feed.xml">RSS 구독 ↗</a></section>
-    </aside>
-  </div>
-  <section id="about" class="about section-space" aria-labelledby="about-heading"><div class="author-mark" aria-hidden="true">윤</div><div class="about-copy"><p class="eyebrow">BEHIND THE NOTES</p><h2 id="about-heading">안녕하세요, 윤동현입니다.</h2><p>AI를 공부하며 논문의 수식과 구조를 내 언어로 풀어 씁니다. 좋은 결과뿐 아니라 비교 조건과 한계도 함께 남겨, 다음 공부의 출발점으로 삼으려 합니다.</p><div class="author-links"><a href="https://github.com/riex71">GitHub ↗</a><a href="feed.xml">RSS 구독 ↗</a><a href="notes.html">개인 공부 노트 ↗</a></div></div><div class="about-aside"><span class="eyebrow">HOW I WRITE</span><p>원 논문을 읽고<br>그림으로 이해하고<br>실험 조건을 확인합니다.</p></div></section>
+  <header class="home-intro"><h1>AI를 공부하며 남긴 기록.</h1><p>논문과 구현에서 이해한 것을 적습니다.</p></header>
+  <section id="archive" aria-labelledby="archive-heading"><div class="section-label"><h2 id="archive-heading">최근 글</h2><a href="archive.html">모든 글 {{COUNT}}</a></div><div class="post-grid home-posts">{{CARDS}}</div></section>
+  <section id="about" class="home-about" aria-labelledby="about-heading"><h2 id="about-heading">윤동현</h2><p>AI를 공부하며 수식과 구조를 내 언어로 풀어 씁니다.<br>원 논문의 그림, 실험 조건, 한계를 함께 기록합니다.</p><p class="about-links"><a href="https://github.com/riex71">GitHub</a><a id="study-map" href="series.html">논문 이어 읽기</a></p></section>
 </main>{{FOOTER}}{{DIALOGS}}</body></html>
