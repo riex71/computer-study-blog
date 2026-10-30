@@ -327,7 +327,7 @@ $('#publish-button').addEventListener('click', async () => {
 });
 addEventListener('beforeunload', event => { if (busy || pending || unsaved.size) { event.preventDefault(); event.returnValue = ''; } });
 try {drafts=await draftStore.list();for(const item of drafts)versions.set(item.id,draftVersion(item));} catch { storageFailed = true; message('브라우저 저장소를 사용할 수 없습니다. 원고 내려받기로 보관해 주세요.'); }
-const selectedDraft=requestedNew?null:requestedDraft?drafts.find(d=>d.id===requestedDraft):requestedEdit?drafts.find(d=>d.original?.post.slug===requestedEdit):drafts.sort((a,b)=>b.savedAt.localeCompare(a.savedAt))[0];
+const selectedDraft=requestedNew?null:requestedDraft?drafts.find(d=>d.id===requestedDraft):requestedEdit?drafts.filter(d=>d.original?.post.slug===requestedEdit).sort((a,b)=>b.savedAt.localeCompare(a.savedAt))[0]:drafts.sort((a,b)=>b.savedAt.localeCompare(a.savedAt))[0];
 fill(selectedDraft||blank());
 if(requestedDraft&&!selectedDraft&&!storageFailed)message('이 브라우저에 해당 임시 글이 없습니다. 다른 기기에서 작성했다면 내려받은 원고 파일을 불러와 주세요.');
 if(storageFailed){$('#draft-status').textContent='임시 저장 불가 · 원고를 내려받아 주세요.';message('브라우저 저장소를 사용할 수 없습니다. 원고 내려받기로 보관해 주세요.');}
