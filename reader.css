@@ -23,8 +23,8 @@
 .mobile-toc summary svg,.toc-heading svg{width:16px;height:16px;flex-shrink:0}
 .mobile-toc .toc-nav{display:block;width:350px;padding:17px 13px;border-radius:10px;box-shadow:0 12px 40px #00000012;scrollbar-width:thin}
 .mobile-toc .toc-list a{font-size:13px}
-@media(min-width:1400px){
-  .toc-rail{display:block;position:absolute;top:50px;bottom:75px;left:100%;width:256px}
+@media(min-width:1440px){
+  .toc-rail{display:block;position:absolute;top:50px;bottom:75px;left:calc(100% + 44px);width:232px}
   .article-toc{display:flex;flex-direction:column;position:sticky;top:105px;max-height:calc(100dvh - 130px);padding:0;border:0;border-radius:0;background:none}
   .toc-heading{padding:0 3px}
   .article-toc h2{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink);margin:0}
@@ -42,13 +42,13 @@
 
 .engram-article-page .public-article h2{scroll-margin-top:12px}
 
-@media(min-width:1400px){.reading-shell:has(.article-toc[hidden]){max-width:840px}}
+@media(min-width:1440px){.reading-shell:has(.article-toc[hidden]){max-width:840px}}
 
 .related-story>span:first-child{min-width:0}.related-story small{display:block;font-size:11px;line-height:1.8;color:var(--muted);margin-bottom:7px}
 .related-title{display:block}.related-description{display:block;margin-top:8px;font-size:12px;line-height:1.95;color:var(--muted)}
 .related-story:hover .related-title{color:var(--accent)}
 .toc-floating-position{display:none}
-@media(max-width:1399px){
+@media(max-width:1439px){
  .mobile-toc.is-floating{position:fixed;right:22px;bottom:22px;z-index:40}
  .article-tools .mobile-toc.is-floating>summary{display:flex;align-items:center;gap:7px;padding:10px 14px;border:1px solid var(--line-strong);border-radius:24px;background:var(--paper);color:var(--ink);box-shadow:0 4px 20px #00000012;font-size:12px}
  .mobile-toc.is-floating>summary::after{display:none}.mobile-toc.is-floating .toc-floating-position{display:inline;margin-left:4px;font-size:10px}

@@ -1,14 +1,14 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const base=process.argv[2]||'http://127.0.0.1:8765/';
 (async()=>{const b=await chromium.launch({headless:true,...(process.platform==='win32'?{channel:'msedge'}:{})}),c=await b.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'}),p=await c.newPage(),checks=[],errors=[],geometry=[];p.setDefaultTimeout(15000);p.on('pageerror',e=>errors.push(e.message));const ok=(name,value)=>{assert(value,name);checks.push(name);console.log('PASS',name)},shot=async name=>{if(process.env.BLOG_TEST_OUTPUT)await p.screenshot({path:path.join(process.env.BLOG_TEST_OUTPUT,name)})};try{
- for(const width of [360,390,768,1024,1280,1399,1400,1440,1920]){
+ for(const width of [360,390,768,1024,1280,1439,1440,1600,1920]){
   await p.setViewportSize({width,height:1000});await p.goto(base+'posts/engram-conditional-memory.html');
   const data=await p.evaluate(()=>{const a=document.querySelector('.public-article').getBoundingClientRect(),toc=document.querySelector('.article-toc'),r=toc.getBoundingClientRect();return {width:innerWidth,articleWidth:a.width,center:(a.left+a.right)/2,overflow:document.documentElement.scrollWidth>innerWidth,tocVisible:getComputedStyle(toc).display!=='none',tocLeft:r.left,tocRight:r.right,articleRight:a.right}});geometry.push(data);
   ok('Article stays centered at '+width,Math.abs(data.center-width/2)<=1&&!data.overflow);
-  if(width>=1400)ok('Contents uses only the right gutter at '+width,data.tocVisible&&data.tocLeft>data.articleRight&&data.tocRight<=width-20);else ok('Compact contents preserves the article width at '+width,!data.tocVisible&&await p.locator('.mobile-toc summary').isVisible());
+  if(width>=1440)ok('Contents uses only the right gutter at '+width,data.tocVisible&&data.tocLeft-data.articleRight>=71.9&&data.tocRight<=width-20);else ok('Compact contents preserves the article width at '+width,!data.tocVisible&&await p.locator('.mobile-toc summary').isVisible());
   if(width===1440)await shot('centered-article-desktop.png');if(width===1920)await shot('centered-article-wide.png');
  }
- ok('Showing contents does not shift or resize the article',Math.abs(geometry.find(x=>x.width===1399).articleWidth-geometry.find(x=>x.width===1400).articleWidth)<=1);
+ ok('Showing contents does not shift or resize the article',Math.abs(geometry.find(x=>x.width===1439).articleWidth-geometry.find(x=>x.width===1440).articleWidth)<=1);
  await p.setViewportSize({width:1440,height:1000});await p.goto(base+'posts/engram-conditional-memory.html');
  ok('Contents has numbered parent and child sections',await p.locator('.article-toc .toc-track>.toc-list>li').count()===6&&await p.locator('.article-toc .toc-list .toc-list a').count()===6&&await p.locator('.article-toc .toc-list .toc-list .toc-number').first().textContent()==='1.1.');
  ok('Child sections have an indented vertical guide',await p.locator('.article-toc .toc-list .toc-list').first().evaluate(e=>getComputedStyle(e).borderLeftStyle==='solid'&&parseFloat(getComputedStyle(e).borderLeftWidth)>0&&e.getBoundingClientRect().left>e.parentElement.parentElement.getBoundingClientRect().left));
