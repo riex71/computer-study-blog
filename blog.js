@@ -152,7 +152,7 @@
       const wrapper=document.createElement('div');wrapper.className='table-scroll';wrapper.tabIndex=0;wrapper.setAttribute('role','region');wrapper.setAttribute('aria-label',(table.querySelector('caption')?.textContent.trim()||'본문 표')+', 가로 스크롤 가능');table.before(wrapper);wrapper.append(table);
     });
     const mobileToc=$('.mobile-toc'),articleTools=$('.article-tools');
-    const compactScreen=matchMedia('(max-width:1399px)');
+    const compactScreen=matchMedia('(max-width:1439px)');
     const floatToc=()=>{
       if(!mobileToc||mobileToc.hidden)return;
       const headerHeight=$('.site-header')?.offsetHeight||72;
