@@ -121,7 +121,7 @@
     addEventListener('scroll', () => { if (!scheduled) { scheduled = true; requestAnimationFrame(progress); } }, { passive: true }); addEventListener('resize', progress); progress();
     const headings = [...article.querySelectorAll('h2[id]')];
     const setActive = () => { let id = headings[0]?.id; for (const heading of headings) { if (heading.getBoundingClientRect().top <= 150) id = heading.id; else break; } $$('[data-toc-link]').forEach(link => { if (link.getAttribute('href') === `#${id}`) link.setAttribute('aria-current', 'location'); else link.removeAttribute('aria-current'); }); };
-    let tocScheduled = false; addEventListener('scroll', () => { if (!tocScheduled) { tocScheduled = true; requestAnimationFrame(() => { setActive(); tocScheduled = false; }); } }, { passive: true }); setActive();
+    let tocScheduled = false; addEventListener('scroll', () => { if (!tocScheduled) { tocScheduled = true; requestAnimationFrame(() => { setActive(); tocScheduled = false; }); } }, { passive: true }); addEventListener('resize',setActive);setActive();
     $$('[data-toc-link]').forEach(link => link.addEventListener('click', () => { const details = link.closest('details'); if (details) details.open = false; }));
     $('[data-copy-link]')?.addEventListener('click', async () => { const canonical = $('link[rel="canonical"]')?.href || location.href; const url = canonical + location.hash; try { await navigator.clipboard.writeText(url); toast('글 링크를 복사했어요.'); } catch { toast('주소 표시줄의 링크를 복사해 주세요.'); } });
   }
