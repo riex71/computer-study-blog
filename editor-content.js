@@ -40,13 +40,13 @@
       const oldRows=reference.querySelectorAll('table')[index]?.querySelectorAll('tbody tr');
       table.querySelectorAll('tbody tr').forEach((row,i)=>{if(oldRows?.[i]?.firstElementChild?.tagName==='TH'&&row.firstElementChild?.tagName==='TD'){const th=document.createElement('th');th.scope='row';while(row.firstElementChild.firstChild)th.append(row.firstElementChild.firstChild);row.firstElementChild.replaceWith(th);}});
     });
-    let count=0;
-    const priorHeadings=[...reference.querySelectorAll('h2[id]')];
-    root.querySelectorAll('h2').forEach(h=>{
+    const counts={H2:0,H3:0};
+    const priorHeadings=[...reference.querySelectorAll('h2[id],h3[id]')];
+    root.querySelectorAll('h2,h3').forEach(h=>{
       if(h.id)return;
       const prior=priorHeadings.find(old=>textKey(old)===textKey(h)&&!used.has(old.id));
       if(prior&&/^[\w가-힣-]+$/.test(prior.id))h.id=prior.id;
-      else{let id;do{id='section-'+String(++count).padStart(2,'0');}while(used.has(id)||reserved.has(id));h.id=id;}
+      else{let id;const prefix=h.tagName==='H3'?'subsection-':'section-';do{id=prefix+String(++counts[h.tagName]).padStart(2,'0');}while(used.has(id)||reserved.has(id));h.id=id;}
       used.add(h.id);
     });
     const sources=[...root.querySelectorAll('h2')].find(h=>/^(?:참고 자료|참고 자료와 그림 출처)$/.test(textKey(h)));
