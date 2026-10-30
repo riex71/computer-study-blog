@@ -152,7 +152,7 @@
       const wrapper=document.createElement('div');wrapper.className='table-scroll';wrapper.tabIndex=0;wrapper.setAttribute('role','region');wrapper.setAttribute('aria-label',(table.querySelector('caption')?.textContent.trim()||'본문 표')+', 가로 스크롤 가능');table.before(wrapper);wrapper.append(table);
     });
     const mobileToc=$('.mobile-toc'),articleTools=$('.article-tools');
-    const compactScreen=matchMedia('(max-width:1179px)');
+    const compactScreen=matchMedia('(max-width:1399px)');
     const floatToc=()=>{
       if(!mobileToc||mobileToc.hidden)return;
       const headerHeight=$('.site-header')?.offsetHeight||72;
@@ -165,7 +165,7 @@
     let scheduled = false;
     const progress = () => {floatToc(); const start = article.getBoundingClientRect().top + scrollY - 100; const length = Math.max(1, article.offsetHeight - innerHeight + 150); const value = Math.max(0, Math.min(1, (scrollY - start) / length)); if (bar) bar.style.transform = `scaleX(${value})`;tocProgress.forEach(fill=>fill.style.transform=`scaleX(${value})`); if (label) label.textContent = `${Math.round(value * 100)}%`; scheduled = false; };
     addEventListener('scroll', () => { if (!scheduled) { scheduled = true; requestAnimationFrame(progress); } }, { passive: true }); addEventListener('resize', progress); progress();
-    const headings = [...article.querySelectorAll('h2[id]')];
+    const headings = [...article.querySelectorAll('h2[id],h3[id]')];
     const tocGroups=$$('.toc-track').map(track=>({track,nav:track.closest('nav'),links:[...track.querySelectorAll('[data-toc-link]')],active:null}));
     const setActive=()=>{
       if(!headings.length)return;
@@ -175,8 +175,9 @@
       for(const group of tocGroups){
         const changed=group.active!==id;group.active=id;
         for(const link of group.links){if(link.getAttribute('href')===`#${id}`)link.setAttribute('aria-current','location');else link.removeAttribute('aria-current');}
-        const active=group.links[index];if(!active||!group.track.getClientRects().length)continue;
+        const active=group.links.find(link=>link.getAttribute('href')===`#${id}`);if(!active||!group.track.getClientRects().length)continue;
         const row=active.getBoundingClientRect(),track=group.track.getBoundingClientRect();
+        group.track.style.setProperty('--toc-marker-x',`${row.left-track.left}px`);
         group.track.style.setProperty('--toc-marker-y',`${row.top-track.top+6}px`);
         group.track.style.setProperty('--toc-marker-height',`${Math.max(14,row.height-12)}px`);group.track.dataset.tocReady='';
         if(changed&&!group.nav.matches(':hover,:focus-within')){

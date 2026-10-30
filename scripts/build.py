@@ -14,6 +14,8 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parent.parent
 BASE = 'https://riex71.github.io/computer-study-blog'
 AUTHOR = '윤동현'
+outline_path=ROOT/'content/outlines.json'
+OUTLINES=json.loads(outline_path.read_text(encoding='utf-8')) if outline_path.exists() else {}
 POSTS = sorted(json.loads((ROOT / 'content/posts.json').read_text(encoding='utf-8')), key=lambda p: p['date'], reverse=True)
 VERSION = hashlib.sha256(b''.join((ROOT / p).read_bytes() for p in ['blog.css', 'reader.css', 'blog.js', 'article-math.js', 'assets/vendor/katex/katex.min.js', 'assets/vendor/katex/katex.min.css'])).hexdigest()[:12]
 BOOKMARK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4z"/></svg>'
@@ -63,18 +65,19 @@ for post in POSTS:
     SourceGuard().feed(body)
     body = re.sub(r'</?(?:strong|b)(?:\s[^>]*)?>', '', body)
     used_ids = set(re.findall(r'\bid="([^"]+)"', body))
-    heading_count = [0]
+    heading_count = {'2':0,'3':0}
     def heading(match):
-        attrs, inner = match.groups(); heading_count[0] += 1
+        level,attrs,inner=match.groups();heading_count[level]+=1
         if 'id=' not in attrs:
-            candidate = f'section-{heading_count[0]:02}'
-            while candidate in used_ids: candidate += '-h'
-            used_ids.add(candidate); attrs += f' id="{candidate}"'
-        return f'<h2{attrs}>{inner}</h2>'
-    body = re.sub(r'<h2([^>]*)>([\s\S]*?)</h2>', heading, body)
+            prefix='section' if level=='2' else 'subsection'
+            candidate=f'{prefix}-{heading_count[level]:02}'
+            while candidate in used_ids:candidate+='-h'
+            used_ids.add(candidate);attrs+=f' id="{candidate}"'
+        return f'<h{level}{attrs}>{inner}</h{level}>'
+    body=re.sub(r'<h([23])([^>]*)>([\s\S]*?)</h\1>',heading,body)
     contents[post['slug']] = '<article class="public-article">\n' + body + '\n</article>'
     post['minutes'] = max(1, math.ceil(len(re.sub(r'\s+', '', text(body))) / 600))
-VERSION = hashlib.sha256((VERSION + js(POSTS) + ''.join(contents.values())).encode()).hexdigest()[:12]
+VERSION = hashlib.sha256((VERSION + js(OUTLINES) + js(POSTS) + ''.join(contents.values())).encode()).hexdigest()[:12]
 
 def card(post, quiet=False):
     slug=post['slug'];url=f'posts/{slug}.html';haystack=' '.join([post['title'],post['description'],*post['tags'],*post['topics']])
@@ -101,10 +104,29 @@ page('series.html', '이어 읽기 — 모델은 어떻게 기억할까', 'Mamba
 def toc_title(value):
     return re.sub(r'^\d{1,2}[.)]\s+', '', text(value))
 
+def table_of_contents(body,parents):
+    headings=list(re.finditer(r'<h([23])[^>]*id="([^"]+)"[^>]*>([\s\S]*?)</h\1>',body))
+    roots=[];seen={};last_section=None
+    for match in headings:
+        level,section_id,title=match.groups()
+        fallback=last_section if level=='3' else None
+        parent_id=parents.get(section_id,fallback)
+        parent=seen.get(parent_id) or seen.get(fallback)
+        node={'id':section_id,'title':toc_title(title),'children':[]}
+        (parent['children'] if parent else roots).append(node);seen[section_id]=node
+        if level=='2':last_section=section_id
+    def render(nodes,prefix=''):
+        rows=[]
+        for index,node in enumerate(nodes,1):
+            number=f'{prefix}.{index}' if prefix else str(index)
+            children=render(node['children'],number) if node['children'] else ''
+            rows.append(f'<li><a data-toc-link href="#{attr(node["id"])}"><span class="toc-number" aria-hidden="true">{number}.</span><span class="toc-title">{escape(node["title"])}</span></a>{children}</li>')
+        return '<ol class="toc-list">'+''.join(rows)+'</ol>'
+    return render(roots),len(headings)
+
 for post in POSTS:
     body = contents[post['slug']]
-    sections=list(re.finditer(r'<h2[^>]*id="([^"]+)"[^>]*>([\s\S]*?)</h2>', body))
-    toc = '<ol class="toc-list">'+''.join(f'<li><a data-toc-link href="#{attr(m.group(1))}"><span class="toc-number" aria-hidden="true">{i:02}</span><span class="toc-title">{escape(toc_title(m.group(2)))}</span></a></li>' for i,m in enumerate(sections,1))+'</ol>'
+    toc,section_count=table_of_contents(body,OUTLINES.get(post['slug'],{}))
     others = sorted((p for p in POSTS if p['slug'] != post['slug']), key=lambda p: len(set(p['topics']) & set(post['topics'])), reverse=True)
     related = ''.join(f'<a class="related-story" href="{p["slug"]}.html"><span><small>{escape(" · ".join(t for t in p["topics"] if t in post["topics"]) or p["category"])} · {p["minutes"]}분 읽기</small><span class="related-title">{escape(p["title"])}</span><span class="related-description">{escape(p["description"])}</span></span><span aria-hidden="true">↗</span></a>' for p in others[:2])
     url = BASE + '/posts/' + post['slug'] + '.html'
@@ -114,7 +136,7 @@ for post in POSTS:
     article_head = article_head.replace('href="feed.xml"','href="../feed.xml"').replace('href="assets/', 'href="../assets/').replace('href="blog.css', 'href="../blog.css').replace('src="blog.js', 'src="../blog.js').replace('content="website"', 'content="article"')
     article_head += f'<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css?v={VERSION}"><script src="../assets/vendor/katex/katex.min.js?v={VERSION}" defer></script><script src="../article-math.js?v={VERSION}" defer></script>'
     article_page=(ROOT/'templates/article.html').read_text(encoding='utf-8')
-    values={'HEAD':article_head+extra_css+f'<link rel="stylesheet" href="../reader.css?v={VERSION}"><script type="application/ld+json">{js(schema)}</script>','BODY_CLASS':'engram-article-page' if post['slug'].startswith('engram') else '', 'HEADER':header('../'),'FOOTER':footer('../'),'DIALOGS':dialogs(),'TITLE':escape(post['title']),'DECK':escape(post.get('deck',post['description'])),'DATE':attr(post['date']),'DISPLAY_DATE':post['date'].replace('-','.'),'MINUTES':str(post['minutes']),'SLUG':post['slug'],'TOC':toc,'TOC_COUNT':str(len(sections)).zfill(2),'TOC_HIDDEN':'' if sections else ' hidden','SAVE':save_button(post['slug'],True),'BODY':body,'RELATED':related}
+    values={'HEAD':article_head+extra_css+f'<link rel="stylesheet" href="../reader.css?v={VERSION}"><script type="application/ld+json">{js(schema)}</script>','BODY_CLASS':'engram-article-page' if post['slug'].startswith('engram') else '', 'HEADER':header('../'),'FOOTER':footer('../'),'DIALOGS':dialogs(),'TITLE':escape(post['title']),'DECK':escape(post.get('deck',post['description'])),'DATE':attr(post['date']),'DISPLAY_DATE':post['date'].replace('-','.'),'MINUTES':str(post['minutes']),'SLUG':post['slug'],'TOC':toc,'TOC_COUNT':str(section_count).zfill(2),'TOC_HIDDEN':'' if section_count else ' hidden','SAVE':save_button(post['slug'],True),'BODY':body,'RELATED':related}
     for key,value in values.items():article_page=article_page.replace('{{'+key+'}}',value)
     assert '{{' not in article_page
     (ROOT / 'posts' / (post['slug'] + '.html')).write_text(article_page, encoding='utf-8')

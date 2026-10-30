@@ -1,0 +1,17 @@
+{
+  "engram-conditional-memory": {
+    "hashing": "architecture",
+    "gating": "architecture",
+    "benchmarks": "allocation",
+    "effective-depth": "allocation",
+    "long-context": "placement",
+    "systems": "placement"
+  },
+  "mamba-selective-ssm": {
+    "section-04": "section-03",
+    "section-05": "section-03",
+    "section-06": "section-03",
+    "section-07": "section-03",
+    "section-09": "section-08"
+  }
+}
