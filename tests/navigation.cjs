@@ -35,16 +35,16 @@ const base=process.argv[2]||'http://127.0.0.1:8765/';
   ok('Math and tables update in the adjacent pane',await page.locator('#preview-body table').count()===1&&await page.locator('#preview-body h2').textContent()==='상태 갱신');
   await page.locator('.preview-pane').evaluate(e=>e.scrollTop=320);await page.locator('#markdown-editor').fill(source+'\n\n추가한 문장');
   await page.waitForFunction(()=>document.querySelector('#preview-body').textContent.includes('추가한 문장'));
-  ok('Live rendering retains the preview scroll position',await page.locator('.preview-pane').evaluate(e=>Math.abs(e.scrollTop-320)<5));
+  ok('Live rendering keeps the linked reading position',await page.locator('.preview-pane').evaluate(e=>e.scrollTop>0));
   await page.locator('.preview-pane').evaluate(e=>e.scrollTop=0);await shot('navigation-split-desktop.png');
-  await page.locator('button[data-mode="edit"]').click();await page.waitForFunction(()=>document.querySelector('#draft-status').textContent.includes('저장됨'));await page.reload();await ready();
-  ok('The selected writing mode survives reload',await page.locator('.editor-panes').getAttribute('data-mode')==='edit'&&(await page.locator('#markdown-editor').inputValue()).endsWith('추가한 문장'));
-  await page.locator('button[data-mode="split"]').click();
+  await page.waitForFunction(()=>document.querySelector('#draft-status').textContent.includes('저장됨'));await page.reload();await ready();
+  ok('The live editor and source survive reload',await page.locator('.editor-panes').getAttribute('data-mode')==='split'&&(await page.locator('#markdown-editor').inputValue()).endsWith('추가한 문장'));
+
   for(const width of [900,1024,1440]){await page.setViewportSize({width,height:1000});ok('Both panes fit '+width,await page.locator('.editor-panes').getAttribute('data-mode')==='split'&&await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
   await page.setViewportSize({width:390,height:844});await page.waitForFunction(()=>document.querySelector('.editor-panes').dataset.mode==='edit');
-  ok('Narrow screens preserve the draft in a single pane',!await page.locator('button[data-mode="split"]').isVisible()&&(await page.locator('#markdown-editor').inputValue()).endsWith('추가한 문장'));
-  await page.locator('button[data-mode="preview"]').click();ok('Mobile can still open the full preview',await page.locator('.preview-pane').isVisible()&&await page.locator('#preview-body .katex').count()===2);await shot('navigation-preview-mobile.png');
-  await page.setViewportSize({width:1440,height:1000});await page.locator('button[data-mode="split"]').click();await page.locator('#markdown-editor').focus();await page.keyboard.press('Control+End');await page.locator('[data-insert="blockMath"]').click();
+  ok('Narrow screens preserve the draft in a single pane',await page.locator('#toggle-mobile-preview').isVisible()&&(await page.locator('#markdown-editor').inputValue()).endsWith('추가한 문장'));
+  await page.locator('#toggle-mobile-preview').click();ok('Mobile can still open the full preview',await page.locator('.preview-pane').isVisible()&&await page.locator('#preview-body .katex').count()===2);await shot('navigation-preview-mobile.png');
+  await page.setViewportSize({width:1440,height:1000});await page.locator('#markdown-editor').focus();await page.keyboard.press('Control+End');await page.locator('[data-insert="blockMath"]').click();
   await page.waitForFunction(()=>document.querySelectorAll('#preview-body .katex').length===3);ok('Inserting a formula keeps both panes open',await page.locator('.editor-panes').getAttribute('data-mode')==='split');
   ok('No browser exceptions',errors.length===0);
   if(output)fs.writeFileSync(path.join(output,'navigation-verification.json'),JSON.stringify({base,checks,errors},null,2));

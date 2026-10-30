@@ -146,7 +146,7 @@
       if(trigger.tagName==='A')trigger.addEventListener('keydown',e=>{if(e.key===' '){e.preventDefault();open();}});
     });
     zoom.addEventListener('click', e => { if (e.target === zoom) zoom.close(); });
-    article.querySelectorAll('pre').forEach(pre => { const wrapper = document.createElement('div'); wrapper.className = 'code-wrap'; pre.before(wrapper); wrapper.append(pre); const copy = document.createElement('button'); copy.className = 'copy-code'; copy.textContent = '복사'; copy.type = 'button'; copy.addEventListener('click', async () => { try { await navigator.clipboard.writeText(pre.textContent); toast('코드를 복사했어요.'); } catch { toast('코드를 선택해서 복사해 주세요.'); } }); wrapper.append(copy); });
+
     article.querySelectorAll('table').forEach(table=>{
       if(table.parentElement.matches('.engram-table-wrap,.table-scroll'))return;
       const wrapper=document.createElement('div');wrapper.className='table-scroll';wrapper.tabIndex=0;wrapper.setAttribute('role','region');wrapper.setAttribute('aria-label',(table.querySelector('caption')?.textContent.trim()||'본문 표')+', 가로 스크롤 가능');table.before(wrapper);wrapper.append(table);

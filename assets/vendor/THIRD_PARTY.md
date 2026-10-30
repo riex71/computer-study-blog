@@ -7,3 +7,5 @@
 Source headers and license files are retained. No runtime CDN is used.
 
 - KaTeX 0.19.1: https://github.com/KaTeX/KaTeX — MIT. Official npm archive integrity (SHA-512) verified; renderer, stylesheet and fonts are vendored locally.
+
+- Prism 1.30.0: https://prismjs.com/ — MIT. Official npm archive SHA-512 integrity verified. Core and selected language grammars are vendored in prism.js; no runtime CDN or automatic language fetch is used.

@@ -17,19 +17,22 @@ const message = text => {
 let previewTimer;
 const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
 const split = value => [...new Set(value.split(',').map(s => s.trim()).filter(Boolean))].slice(0, 20);
+const sourceText = value => value.replace(/\r\n?/g,'\n').trim();
 function closeDialog(id){const dialog=$('#'+id);if(dialog?.open)dialog.close();}
 function openDialog(id){for(const dialog of document.querySelectorAll('dialog[open]'))if(dialog.id!==id)dialog.close();const dialog=$('#'+id);if(!dialog.open)dialog.showModal();}
 const splitScreen=matchMedia('(min-width:900px)');
-let preferredMode='split';
-try{const saved=localStorage.getItem('studybase.writer.view');if(['edit','split','preview'].includes(saved))preferredMode=saved;}catch{}
-function setMode(mode,{remember=false}={}){
-  if(!['edit','split','preview'].includes(mode))mode='edit';
-  if(remember){preferredMode=mode;try{localStorage.setItem('studybase.writer.view',mode);}catch{}}
-  if(mode==='split'&&!splitScreen.matches)mode='edit';
+let mobilePreview=false,scrollSync,sourceHighlight;
+function setMode(mode){
+  if(mode==='preview')mobilePreview=true;else if(mode==='edit')mobilePreview=false;
+  mode=splitScreen.matches?'split':mobilePreview?'preview':'edit';
   $('.editor-panes').dataset.mode=mode;$('.writing-desk').dataset.mode=mode;$('.writer-layout').dataset.mode=mode;
-  document.querySelectorAll('button[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
+  $('#toggle-mobile-preview').textContent=mode==='preview'?'원고로 돌아가기':'미리보기';$('#toggle-mobile-preview').setAttribute('aria-pressed',String(mode==='preview'));
+  scrollSync?.refresh();
+  sourceHighlight?.refresh();
 }
-splitScreen.addEventListener('change',()=>setMode(preferredMode));
+splitScreen.addEventListener('change',()=>setMode());
+scrollSync=EditorScroll.connect($('#markdown-editor'),$('.preview-pane'));
+sourceHighlight=EditorSource.connect($('#markdown-editor'));
 function ensureSlug(force=false){
   if(!$('#post-slug').value&&!draft.original&&!draft.images.length&&($('#post-title').value.trim()||force))$('#post-slug').value=$('#post-title').value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,80).replace(/-$/,'')||'note-'+today().replace(/-/g,'')+'-'+draft.id.slice(0,6);
 }
@@ -69,8 +72,11 @@ function renderPreview() {
   $('.preview-pane').classList.toggle('engram-article-page',draft.post.slug.startsWith('engram'));
   const math = StudyMath.render($('#preview-body'));
   window.StudyLabs?.mount($('#preview-body'));
+  window.StudyCode?.mount($('#preview-body'));
   $('#math-status').textContent = math.errors ? `${math.errors}개 수식의 문법을 확인해 주세요. 입력한 식은 그대로 보관됩니다.` : '';
   previewPane.scrollTop=scroll;
+  scrollSync.refresh();
+  sourceHighlight.refresh();
   $('#word-count').textContent = draft.markdown.replace(/\s/g, '').length.toLocaleString() + '자';
 }
 function remember(record){
@@ -119,8 +125,9 @@ function fill(next) {
   $('#post-topics').value = p.topics.join(', '); $('#post-tags').value = p.tags.join(', ');
   for (const [key, id] of [['thumbnailAlt','thumbnail-alt'],['thumbnailCredit','thumbnail-credit'],['thumbnailSource','thumbnail-source']]) $('#post-' + id).value = p[key] || '';
   $('#post-slug').disabled = !!draft.original || !!draft.images.length;
-  $('#markdown-editor').value=draft.markdown;setMode(preferredMode);updateContext();closeDialog('library-dialog');renderPreview();renderDrafts();renderDeployment();message('');
+  $('#markdown-editor').value=draft.markdown;setMode();updateContext();closeDialog('library-dialog');$('#previous-edit-note').hidden=true;$('#resume-previous-edit').hidden=false;$('#open-latest-edit').hidden=true;renderPreview();renderDrafts();renderDeployment();message('');
   const position=draft.position||{start:0,end:0,scroll:0};$('#markdown-editor').setSelectionRange(position.start||0,position.end||0);$('#markdown-editor').scrollTop=position.scroll||0;
+  scrollSync.reset();
   if(draft.deployment?.status!=='published'&&draft.deployment)watchDeployment({...draft.deployment,draftId:draft.id,post:draft.original?.post,html:draft.original?.html,markdown:draft.original?.markdown},0,deploymentEpoch);
 }
 function lockEditor(){
@@ -172,7 +179,6 @@ function populatePosts(){
 async function loadPost(slug, force = false) {
   if (!slug || busy) return;
   const existing=(draft.original?.post.slug===slug?draft:drafts.filter(d=>d.original?.post.slug===slug).sort((a,b)=>b.savedAt.localeCompare(a.savedAt))[0]);
-  if (existing && !force) {if(draft?.id!==existing.id)await activateDraft(existing);closeDialog('library-dialog');setMode(preferredMode);$('#markdown-editor').focus();message('');return;}
   busy=true;const unlock=lockEditor();$('#draft-status').textContent='원고 불러오는 중…';
   try {
     await save();
@@ -185,8 +191,10 @@ async function loadPost(slug, force = false) {
       post = posts.find(p => p.slug === slug); if (!post) throw Error('공개 글을 찾을 수 없습니다.');
       [markdown, html] = await Promise.all([publicFile(post.sourceMarkdown), publicFile(post.sourceHtml)]);
     }
-    const next = blank(); next.post = structuredClone(post); next.markdown = markdown.trim(); next.original = { post:structuredClone(post), markdown, html };
+    const clean=existing&&sourceText(existing.markdown)===sourceText(EditorContent.normalizeLegacy(existing.original.markdown,existing.original.html))&&JSON.stringify(existing.post)===JSON.stringify(existing.original.post);
+    const next = clean&&!force?{...structuredClone(existing),position:undefined,deployment:undefined}:blank(); next.post = structuredClone(post); next.markdown = markdown.trim(); next.original = { post:structuredClone(post), markdown, html };
     fill(next); await save(); message('');
+    if(existing&&!clean){$('#previous-edit-text').textContent='이전에 작성하던 수정본도 임시 글에 보관되어 있습니다. 지금은 최신 공개본을 편집하고 있습니다.';$('#previous-edit-note').hidden=false;$('#resume-previous-edit').dataset.draftId=existing.id;}
   } catch (error) { message(error.message); } finally { busy=false;unlock();renderDrafts();populatePosts();$('#markdown-editor').focus();}
 }
 function validate() {
@@ -218,8 +226,10 @@ $('#pick-image').addEventListener('click',()=>$('#image-upload').click());
 $('#pick-import').addEventListener('click',()=>$('#import-draft').click());
 $('#reload-published').addEventListener('click',()=>{if(draft.original){closeDialog('settings-dialog');loadPost(draft.post.slug,true)}});
 document.querySelectorAll('[data-close-dialog]').forEach(button=>button.addEventListener('click',()=>closeDialog(button.dataset.closeDialog)));
+$('#open-latest-edit').addEventListener('click',()=>{if(draft.original&&!busy)loadPost(draft.original.post.slug,true);});
+$('#resume-previous-edit').addEventListener('click',()=>{const previous=drafts.find(entry=>entry.id===$('#resume-previous-edit').dataset.draftId);if(previous&&!busy)activateDraft(previous);});
 
-for(const button of document.querySelectorAll('button[data-mode]'))button.addEventListener('click',()=>{if(button.dataset.mode!=='edit'){collect();renderPreview();}setMode(button.dataset.mode,{remember:true});});
+$('#toggle-mobile-preview').addEventListener('click',()=>{collect();renderPreview();setMode(mobilePreview?'edit':'preview');});
 document.querySelectorAll('[data-insert]').forEach(button => button.addEventListener('click', () => {
   if (busy) return;
   const editor=$('#markdown-editor'), start=editor.selectionStart, end=editor.selectionEnd, selected=editor.value.slice(start,end);
@@ -391,20 +401,26 @@ $('#publish-button').addEventListener('click', async () => {
 });
 addEventListener('beforeunload', event => { if (busy || pending || unsaved.size) { event.preventDefault(); event.returnValue = ''; } });
 try {drafts=await draftStore.list();for(const item of drafts)versions.set(item.id,draftVersion(item));} catch { storageFailed = true; message('브라우저 저장소를 사용할 수 없습니다. 원고 내려받기로 보관해 주세요.'); }
-const selectedDraft=requestedNew?null:requestedDraft?drafts.find(d=>d.id===requestedDraft):requestedEdit?drafts.filter(d=>d.original?.post.slug===requestedEdit).sort((a,b)=>b.savedAt.localeCompare(a.savedAt))[0]:drafts.sort((a,b)=>b.savedAt.localeCompare(a.savedAt))[0];
+const selectedDraft=requestedNew||requestedEdit?null:requestedDraft?drafts.find(d=>d.id===requestedDraft):drafts.sort((a,b)=>b.savedAt.localeCompare(a.savedAt))[0];
 fill(selectedDraft||blank());
 if(requestedDraft&&!selectedDraft&&!storageFailed)message('이 브라우저에 해당 임시 글이 없습니다. 다른 기기에서 작성했다면 내려받은 원고 파일을 불러와 주세요.');
 if(storageFailed){$('#draft-status').textContent='임시 저장 불가 · 원고를 내려받아 주세요.';message('브라우저 저장소를 사용할 수 없습니다. 원고 내려받기로 보관해 주세요.');}
 channel?.addEventListener('message',async event=>{try{await saveQueue;await refreshDrafts();if(event.data.id===draft?.id)message('다른 탭에서 이 임시 글이 변경되었습니다. 계속 작성하면 복사본으로 보관합니다.');}catch{}});
 function readyEditor(){
   if(editorReady)return;editorReady=true;$('#writer-boot-lock').disabled=false;$('#writer-boot-lock').removeAttribute('aria-busy');$('#review-button').disabled=false;$('#open-library').disabled=false;$('#open-settings').disabled=false;
-  setMode(preferredMode);
+  setMode();
   if(requestedEdit||requestedDraft)$('#markdown-editor').focus();else if(requestedNew)$('#post-title').focus();
 }
 if(!requestedEdit)readyEditor();else $('#draft-status').textContent='공개 원고를 불러오는 중…';
 try {
   posts = JSON.parse(await publicFile('content/posts.json')); populatePosts();
   if(requestedEdit)await loadPost(requestedEdit);
+  else if(requestedDraft&&draft.original){
+    const currentId=draft.id,latest=posts.find(post=>post.slug===draft.original.post.slug);
+    if(latest){const markdown=await publicFile(latest.sourceMarkdown);if(draft.id===currentId&&(sourceText(markdown)!==sourceText(draft.original.markdown)||JSON.stringify(latest)!==JSON.stringify(draft.original.post))){
+      $('#previous-edit-text').textContent='이 원고를 만든 뒤 공개 글이 바뀌었습니다. 현재 수정본은 그대로 보관됩니다.';$('#previous-edit-note').hidden=false;$('#resume-previous-edit').hidden=true;$('#open-latest-edit').hidden=false;
+    }}
+  }
 }catch(error){message(error.message);}finally{readyEditor();}
 
 addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='s'&&editorReady&&!busy){event.preventDefault();save();}});
