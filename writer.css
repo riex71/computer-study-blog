@@ -11,3 +11,5 @@ textarea{font:inherit;color:inherit;resize:vertical}button,input,textarea,select
 
 .writer-message:not(:empty){display:flex;align-items:center;gap:18px}.writer-message>button{flex-shrink:0;border:1px solid var(--line);border-radius:3px;background:var(--paper);color:var(--ink);font-size:10px;padding:6px 10px}
 .deployment-note{padding:15px 18px;margin:20px 0 0;border:1px solid var(--line);border-radius:3px;background:var(--wash)}.deployment-note p{margin:0 0 9px;font-size:12px;line-height:1.9}.deployment-note>div{display:flex;gap:18px;align-items:center;flex-wrap:wrap;font-size:11px}.deployment-note button{background:var(--surface);border:1px solid var(--line-strong);border-radius:3px;padding:5px 10px;font-size:10px}
+
+.writer-boot-lock{border:0;padding:0;margin:0;min-width:0;min-inline-size:0;width:100%}

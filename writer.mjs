@@ -4,6 +4,7 @@ const $ = s => document.querySelector(s);
 const fields = ['title','description','slug','date','category','topics','tags','thumbnail','thumbnail-alt','thumbnail-credit','thumbnail-source'];
 const initialParams = new URLSearchParams(location.search);
 const requestedEdit = initialParams.get('edit'), requestedDraft = initialParams.get('draft');
+let editorReady=false;
 let draft, drafts = [], posts = [], publisher, busy = false, pending = 0, storageFailed = false, pollTimer, deploymentEpoch=0, saveQueue=Promise.resolve();
 const versions=new Map(),aliases=new Map(),unsaved=new Map(),draftStore=new DraftStore();
 const channel=(()=>{try{return typeof BroadcastChannel==='function'?new BroadcastChannel('studybase.writer.updates'):null;}catch{return null;}})();
@@ -128,11 +129,11 @@ function renderDrafts(){
 }
 async function publicFile(path) {
   const url = new URL(path, location.href); url.searchParams.set('v', Date.now());
-  const res = await fetch(url, { cache:'no-store' }); if (!res.ok) throw Error('공개 원고를 불러오지 못했습니다. 배포가 끝난 뒤 다시 시도해 주세요.'); return res.text();
+  const res = await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(20000)}); if (!res.ok) throw Error('공개 원고를 불러오지 못했습니다. 배포가 끝난 뒤 다시 시도해 주세요.'); return res.text();
 }
 function populatePosts() {
   const select = $('#published-post'); const selected = select.value; select.replaceChildren(new Option('수정할 글 선택', ''));
-  for (const post of posts) select.add(new Option(post.title, post.slug)); select.value = selected;
+  for (const post of posts) select.add(new Option(post.title, post.slug)); select.value=selected;select.disabled=busy||!posts.length;$('#load-post').disabled=busy||!posts.length;
 }
 async function loadPost(slug, force = false) {
   if (!slug || busy) return;
@@ -185,7 +186,7 @@ for (const button of document.querySelectorAll('button[data-mode]')) button.addE
   document.querySelector('.editor-panes').dataset.mode = button.dataset.mode;
   document.querySelectorAll('button[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
 });
-if (matchMedia('(max-width:800px)').matches) document.querySelector('button[data-mode="edit"]').click();
+
 document.querySelectorAll('[data-insert]').forEach(button => button.addEventListener('click', () => {
   if (busy) return;
   const editor=$('#markdown-editor'), start=editor.selectionStart, end=editor.selectionEnd, selected=editor.value.slice(start,end);
@@ -311,12 +312,18 @@ $('#publish-button').addEventListener('click', async () => {
 });
 addEventListener('beforeunload', event => { if (busy || pending || unsaved.size) { event.preventDefault(); event.returnValue = ''; } });
 try {drafts=await draftStore.list();for(const item of drafts)versions.set(item.id,draftVersion(item));} catch { storageFailed = true; message('브라우저 저장소를 사용할 수 없습니다. 원고 내려받기로 보관해 주세요.'); }
-const selectedDraft=requestedDraft?drafts.find(d=>d.id===requestedDraft):drafts.sort((a,b)=>b.savedAt.localeCompare(a.savedAt))[0];
+const selectedDraft=requestedDraft?drafts.find(d=>d.id===requestedDraft):requestedEdit?drafts.find(d=>d.original?.post.slug===requestedEdit):drafts.sort((a,b)=>b.savedAt.localeCompare(a.savedAt))[0];
 fill(selectedDraft||blank());
 if(requestedDraft&&!selectedDraft&&!storageFailed)message('이 브라우저에 해당 임시 글이 없습니다. 다른 기기에서 작성했다면 내려받은 원고 파일을 불러와 주세요.');
 if(storageFailed){$('#draft-status').textContent='임시 저장 불가 · 원고를 내려받아 주세요.';message('브라우저 저장소를 사용할 수 없습니다. 원고 내려받기로 보관해 주세요.');}
 channel?.addEventListener('message',async event=>{try{await saveQueue;await refreshDrafts();if(event.data.id===draft?.id)message('다른 탭에서 이 임시 글이 변경되었습니다. 계속 작성하면 복사본으로 보관합니다.');}catch{}});
+function readyEditor(){
+  if(editorReady)return;editorReady=true;$('#writer-boot-lock').disabled=false;$('#writer-boot-lock').removeAttribute('aria-busy');$('#review-button').disabled=false;
+  $('#published-post').disabled=!posts.length;$('#load-post').disabled=!posts.length;
+  if(matchMedia('(max-width:800px)').matches)document.querySelector('button[data-mode="edit"]').click();
+}
+if(!requestedEdit)readyEditor();else $('#draft-status').textContent='공개 원고를 불러오는 중…';
 try {
   posts = JSON.parse(await publicFile('content/posts.json')); populatePosts();
   if (requestedEdit) { $('#published-post').value = requestedEdit; await loadPost(requestedEdit); }
-} catch (error) { message(error.message); }
+}catch(error){message(error.message);}finally{readyEditor();}
