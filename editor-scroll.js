@@ -26,10 +26,10 @@
       const css=getComputedStyle(editor);
       for(const property of ['font','lineHeight','letterSpacing','padding','tabSize','wordBreak','overflowWrap'])mirror.style[property]=css[property];
       mirror.style.width=editor.clientWidth+'px';mirror.textContent=editor.value+'\u200b';
-      const text=mirror.firstChild,range=document.createRange(),top=mirror.getBoundingClientRect().top,headings=[...pane.querySelectorAll('.public-article h2,.public-article h3')];
+      const text=mirror.firstChild,range=document.createRange(),top=mirror.getBoundingClientRect().top,headings=[...pane.querySelectorAll('.public-article h2,.public-article h3,.public-article h4,.public-article h5,.public-article h6')];
       let offset=0,index=0;
       for(const token of marked.lexer(editor.value)){
-        const positions=token.type==='heading'&&[2,3].includes(token.depth)?[0]:token.type==='html'?[...token.raw.matchAll(/<h[23]\b/gi)].map(match=>match.index):[];
+        const positions=token.type==='heading'&&[1,2,3,4,5,6].includes(token.depth)?[0]:token.type==='html'?[...token.raw.matchAll(/<h[1-6]\b/gi)].map(match=>match.index):[];
         for(const position of positions){
           const heading=headings[index++];if(!heading)continue;
           const start=Math.min(offset+position,editor.value.length);range.setStart(text,start);range.setEnd(text,Math.min(start+1,text.length));

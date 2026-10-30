@@ -72,6 +72,18 @@
 .article-toc .toc-heading svg,.article-toc .toc-heading .toc-position,.article-toc .toc-progress{display:none}
 .article-toc .toc-top{border:0;margin:12px 0 0 8px;padding:9px 0}
 .public-article h3{scroll-margin-top:12px}
+.public-article h4{font-size:18px;line-height:1.75;margin:1.8em 0 .85em}
+.public-article h5{font-size:17px;line-height:1.8;margin:1.7em 0 .8em}
+.public-article h6{font-size:16px;line-height:1.8;margin:1.6em 0 .8em;color:var(--muted)}
+.public-article h4,.public-article h5,.public-article h6{font-weight:400;scroll-margin-top:12px}
+.public-article input[type=checkbox]{width:14px;height:14px;margin-right:8px;vertical-align:middle;accent-color:var(--accent)}
+.public-article table .align-left{text-align:left!important}
+.public-article table .align-center{text-align:center!important}
+.public-article table .align-right{text-align:right!important}
+.toc-list .toc-list .toc-list{margin-left:5px;padding-left:7px}
+.toc-list .toc-list .toc-list a{grid-template-columns:max-content minmax(0,1fr);font-size:11px}
+.toc-number{white-space:nowrap}
+@media print{.public-article h4,.public-article h5,.public-article h6{break-after:avoid}}
 
 .article-revision{font-size:11px;line-height:1.9;color:var(--muted);margin:18px 0 0}
 .math-display{font-size:var(--reading-size,17px)}

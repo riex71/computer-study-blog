@@ -12,6 +12,7 @@ import re
 import subprocess
 import shutil
 import xml.etree.ElementTree as ET
+from outline import table_of_contents
 
 ROOT = Path(__file__).resolve().parent.parent
 node = os.environ.get('STUDYBASE_NODE') or shutil.which('node') or shutil.which('node.exe')
@@ -22,7 +23,6 @@ if str(node).endswith('.exe') and str(compiler).startswith('/mnt/'):
 subprocess.run([node, str(compiler)], cwd=ROOT, check=True)
 BASE = 'https://riex71.github.io/computer-study-blog'
 AUTHOR = '윤동현'
-OUTLINES={}
 POSTS = sorted(json.loads((ROOT / 'content/posts.json').read_text(encoding='utf-8')), key=lambda p: p['date'], reverse=True)
 VERSION = hashlib.sha256(b''.join((ROOT / p).read_bytes() for p in ['blog.css', 'reader.css', 'blog.js', 'article-math.js', 'article-labs.js', 'article-code.js', 'assets/vendor/prism.js', 'assets/vendor/katex/katex.min.js', 'assets/vendor/katex/katex.min.css'])).hexdigest()[:12]
 BOOKMARK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4z"/></svg>'
@@ -72,20 +72,9 @@ for post in POSTS:
     body = source_path.read_text(encoding='utf-8').strip()
     SourceGuard().feed(body)
     body = re.sub(r'</?(?:strong|b)(?:\s[^>]*)?>', '', body)
-    used_ids = set(re.findall(r'\bid="([^"]+)"', body))
-    heading_count = {'2':0,'3':0}
-    def heading(match):
-        level,attrs,inner=match.groups();heading_count[level]+=1
-        if 'id=' not in attrs:
-            prefix='section' if level=='2' else 'subsection'
-            candidate=f'{prefix}-{heading_count[level]:02}'
-            while candidate in used_ids:candidate+='-h'
-            used_ids.add(candidate);attrs+=f' id="{candidate}"'
-        return f'<h{level}{attrs}>{inner}</h{level}>'
-    body=re.sub(r'<h([23])([^>]*)>([\s\S]*?)</h\1>',heading,body)
     contents[post['slug']] = '<article class="public-article">\n' + body + '\n</article>'
     post['minutes'] = max(1, math.ceil(len(re.sub(r'\s+', '', text(body))) / 600))
-VERSION = hashlib.sha256((VERSION + js(OUTLINES) + js(POSTS) + ''.join(contents.values())).encode()).hexdigest()[:12]
+VERSION = hashlib.sha256((VERSION + js(POSTS) + ''.join(contents.values())).encode()).hexdigest()[:12]
 
 def card(post, quiet=False):
     slug=post['slug'];url=f'posts/{slug}.html';haystack=' '.join([post['title'],post['description'],*post['tags'],*post['topics']])
@@ -109,32 +98,9 @@ page('archive.html', '아카이브', '주제와 키워드로 찾는 AI 공부 �
 series = '''<section class="page-intro"><h1>모델은 어떻게 기억할까</h1><p>같은 ‘기억’이라는 단어를 쓰지만, 저장하는 것과 꺼내 쓰는 방법은 다릅니다.<br>상태를 갱신하는 Mamba에서 주소로 조회하는 Engram으로 이어 읽습니다.</p></section><div class="series-layout"><aside><p class="eyebrow">읽기 전에</p><p>벡터와 행렬 곱, 신경망의 층 개념을 알고 있다면 시작할 수 있습니다. SSM을 처음 접한다면 첫 글의 상태 갱신식부터 천천히 읽어보세요.</p><a href="archive.html?topic=메모리">메모리 주제로 더 찾기 ↗</a></aside><div class="series-steps"><section><span class="path-number">01</span><h2>무엇을 기억하고 잊을까</h2><p>Mamba는 입력에 따라 상태 갱신 방식을 바꿉니다. 이전 토큰을 모두 보관하는 대신, 과거 정보를 상태에 압축하는 설계와 그 대가를 살펴봅니다.</p><p>읽은 뒤에는 상태 갱신식의 각 항을 설명하고, 고정 계수와 입력별 선택의 차이를 작은 Python 예제로 확인할 수 있습니다.</p><a class="text-link" href="posts/mamba-selective-ssm.html">Mamba 읽기 <span>↗</span></a></section><section><span class="path-number">02</span><h2>무엇을 계산하고 찾아올까</h2><p>Engram은 짧은 토큰 패턴으로 메모리 주소를 정하고, 조회한 벡터를 현재 문맥에 맞춰 결합합니다. 상태 갱신과는 다른 ‘기억’의 역할을 읽습니다.</p><p>해시 테이블과 N-gram을 처음 접해도 토큰 예제부터 따라갈 수 있습니다. 읽은 뒤에는 주소를 정하는 과정과 조회 결과의 반영량을 정하는 과정을 구분해 보세요.</p><a class="text-link" href="posts/engram-conditional-memory.html">Engram 읽기 <span>↗</span></a></section><section><span class="path-number">03</span><h2>두 글을 읽고 남길 질문</h2><ul><li>입력이 달라지면 저장된 값이 바뀌는가, 조회하는 주소가 바뀌는가?</li><li>긴 문맥을 처리하는 비용은 어디에서 발생하는가?</li><li>논문의 성능 비교에서 학습량과 추론 비용은 어떻게 통제됐는가?</li></ul><p>RAG의 외부 문서 검색, 대화 기록 저장, recurrent state도 구분해 보세요.</p><a class="text-link" href="posts/engram-conditional-memory.html#related">개념 비교로 돌아가기 <span>↗</span></a></section></div></div>'''
 page('series.html', '이어 읽기 — 모델은 어떻게 기억할까', 'Mamba와 Engram을 연결하는 읽기 가이드', series, 'series')
 
-def toc_title(value):
-    return re.sub(r'^\d{1,2}[.)]\s+', '', text(value))
-
-def table_of_contents(body,parents):
-    headings=list(re.finditer(r'<h([23])[^>]*id="([^"]+)"[^>]*>([\s\S]*?)</h\1>',body))
-    roots=[];seen={};last_section=None
-    for match in headings:
-        level,section_id,title=match.groups()
-        fallback=last_section if level=='3' else None
-        parent_id=parents.get(section_id,fallback)
-        parent=seen.get(parent_id) or seen.get(fallback)
-        node={'id':section_id,'title':toc_title(title),'children':[]}
-        (parent['children'] if parent else roots).append(node);seen[section_id]=node
-        if level=='2':last_section=section_id
-    def render(nodes,prefix=''):
-        rows=[]
-        for index,node in enumerate(nodes,1):
-            number=f'{prefix}.{index}' if prefix else str(index)
-            children=render(node['children'],number) if node['children'] else ''
-            rows.append(f'<li><a data-toc-link href="#{attr(node["id"])}"><span class="toc-number" aria-hidden="true">{number}.</span><span class="toc-title">{escape(node["title"])}</span></a>{children}</li>')
-        return '<ol class="toc-list">'+''.join(rows)+'</ol>'
-    return render(roots),len(headings)
-
 for post in POSTS:
     body = contents[post['slug']]
-    toc,section_count=table_of_contents(body,OUTLINES.get(post['slug'],{}))
+    toc,section_count=table_of_contents(body)
     others = sorted((p for p in POSTS if p['slug'] != post['slug']), key=lambda p: len(set(p['topics']) & set(post['topics'])), reverse=True)
     related = ''.join(f'<a class="related-story" href="{p["slug"]}.html"><span><small>{escape(" · ".join(t for t in p["topics"] if t in post["topics"]) or p["category"])} · {p["minutes"]}분 읽기</small><span class="related-title">{escape(p["title"])}</span><span class="related-description">{escape(p["description"])}</span></span><span aria-hidden="true">↗</span></a>' for p in others[:2])
     url = BASE + '/posts/' + post['slug'] + '.html'

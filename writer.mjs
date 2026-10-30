@@ -64,7 +64,7 @@ function renderPreview() {
   const previewPane=$('.preview-pane'),scroll=previewPane.scrollTop;
   $('#preview-title').textContent = draft.post.title || '제목 미리보기';
   $('#preview-description').textContent = draft.post.description;
-  $('#preview-body').innerHTML = EditorContent.preview(EditorContent.compile(draft.markdown, draft.original?.html), draft.images);
+  $('#preview-body').innerHTML = EditorContent.preview(EditorContent.compile(draft.markdown, draft.original?.html), draft.images,draft.post.slug);
   $('#preview-body').querySelectorAll('table').forEach(table=>{
     if(table.parentElement.matches('.engram-table-wrap,.table-scroll'))return;
     const wrapper=document.createElement('div');wrapper.className='table-scroll';wrapper.tabIndex=0;wrapper.setAttribute('role','region');wrapper.setAttribute('aria-label',(table.querySelector('caption')?.textContent.trim()||'본문 표')+', 가로 스크롤 가능');table.before(wrapper);wrapper.append(table);
@@ -212,11 +212,20 @@ function validate() {
   if (p.thumbnailSource && !/^https:\/\/[^\s<>"']+$/.test(p.thumbnailSource)) throw Error('이미지 출처 링크는 https 주소를 써주세요.');
   p.category ||= '공부 기록';
   const html=EditorContent.compile(draft.markdown, draft.original?.html),probe=document.createElement('div');probe.innerHTML=html;
+  if(!probe.textContent.trim()&&!probe.querySelector('img[src]'))throw Object.assign(Error('본문에 표시할 내용이 없습니다. 텍스트나 그림을 추가해 주세요.'),{field:'body'});
   if(StudyMath.render(probe).errors)throw Error('수식 문법을 확인해 주세요. 미리보기에서 오류가 있는 식을 고친 뒤 게시할 수 있습니다.');
   return html;
 }
 for (const key of fields) $('#post-' + key).addEventListener('input', () => { collect(); renderPreview(); save(); });
 $('#post-title').addEventListener('change',()=>{ensureSlug();save();updateContext();});
+$('#preview-body').addEventListener('click',event=>{
+  const link=event.target.closest('a[href^="#"]');if(!link)return;event.preventDefault();
+  let id;try{id=decodeURIComponent(link.getAttribute('href').slice(1));}catch{id=link.getAttribute('href').slice(1);}
+  const pane=$('.preview-pane'),target=[...pane.querySelectorAll('[data-preview-anchor]')].find(node=>node.dataset.previewAnchor===id);
+  const desktop=$('.editor-panes').dataset.mode==='split';
+  if(!id){if(desktop)pane.scrollTop=0;else scrollTo({top:0,behavior:'instant'});return;}
+  if(target){if(desktop)pane.scrollTop+=target.getBoundingClientRect().top-pane.getBoundingClientRect().top-12;else scrollTo({top:Math.max(0,target.getBoundingClientRect().top+scrollY-120),behavior:'instant'});}else message('미리보기에서 해당 제목 주소를 찾을 수 없습니다.');
+});
 $('#markdown-editor').addEventListener('input', () => { collect();clearTimeout(previewTimer);previewTimer=setTimeout(renderPreview,100);save(); });
 $('#new-post').addEventListener('click',async()=>{if(busy)return;closeDialog('library-dialog');await activateDraft(blank());$('#post-title').focus();});
 $('#open-library').addEventListener('click',()=>{if(!busy)openDialog('library-dialog')});
@@ -344,7 +353,7 @@ $('#review-button').addEventListener('click', async () => {
     $('#review-connect').hidden = !!publisher;
     $('#publish-button').disabled = !publisher; $('#published-link').hidden = true; $('#deployment-link').hidden = true;
     $('#publish-button').hidden = false; openDialog('review-dialog');
-  }catch(error){message(error.message);if(!$('#post-title').value.trim()){setMode('edit');$('#post-title').focus();}else if(!$('#markdown-editor').value.trim()) {setMode('edit');$('#markdown-editor').focus();}else if($('#math-status').textContent){setMode('preview');}else openDialog('settings-dialog');}
+  }catch(error){message(error.message);if(!$('#post-title').value.trim()){setMode('edit');$('#post-title').focus();}else if(error.field==='body'||!$('#markdown-editor').value.trim()) {setMode('edit');$('#markdown-editor').focus();}else if($('#math-status').textContent){setMode('preview');}else openDialog('settings-dialog');}
 });
 $('#close-review').addEventListener('click', () => { if (!busy) $('#review-dialog').close(); });
 $('#review-connect').addEventListener('click',()=>{returnToReview=true;openDialog('connect-dialog');$('#github-token').focus()});

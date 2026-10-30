@@ -33,11 +33,14 @@ for file, d in documents.items():
         else:
             url=urlsplit(link)
             if url.scheme or url.netloc:continue
-            target=file.parent/unquote(url.path) if url.path else file
+            if url.path.startswith('/'):
+                if not url.path.startswith('/computer-study-blog/'):continue
+                target=ROOT/unquote(url.path.removeprefix('/computer-study-blog/'))
+            else:target=file.parent/unquote(url.path) if url.path else file
         target=target.resolve()
         assert target.is_relative_to(ROOT.resolve()), f'Link leaves site root in {file.name}: {link}'
         assert target.exists(), f'Missing local link in {file.name}: {link}'
-        fragment=urlsplit(link).fragment
+        fragment=unquote(urlsplit(link).fragment)
         if fragment and target in documents:assert fragment in documents[target].ids,f'Missing anchor in {file.name}: {link}'
 
 for css in ROOT.rglob('*.css'):
