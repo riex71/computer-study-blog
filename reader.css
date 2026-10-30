@@ -43,3 +43,20 @@
 .engram-article-page .public-article h2{scroll-margin-top:12px}
 
 @media(min-width:1180px){.reading-shell:has(.article-toc[hidden]){display:block;max-width:840px}}
+
+.related-story>span:first-child{min-width:0}.related-story small{display:block;font-size:11px;line-height:1.8;color:var(--muted);margin-bottom:7px}
+.related-title{display:block}.related-description{display:block;margin-top:8px;font-size:12px;line-height:1.95;color:var(--muted)}
+.related-story:hover .related-title{color:var(--accent)}
+.toc-floating-position{display:none}
+@media(max-width:1179px){
+ .mobile-toc.is-floating{position:fixed;right:22px;bottom:22px;z-index:40}
+ .article-tools .mobile-toc.is-floating>summary{display:flex;align-items:center;gap:7px;padding:10px 14px;border:1px solid var(--line-strong);border-radius:24px;background:var(--paper);color:var(--ink);box-shadow:0 4px 20px #00000012;font-size:12px}
+ .mobile-toc.is-floating>summary::after{display:none}.mobile-toc.is-floating .toc-floating-position{display:inline;margin-left:4px;font-size:10px}
+ .mobile-toc.is-floating .toc-nav{left:auto;right:0;top:auto;bottom:calc(100% + 10px);width:350px;max-width:calc(100vw - 40px);max-height:min(65dvh,530px)}
+}
+@media(max-width:600px){.mobile-toc.is-floating{right:18px;bottom:18px}.related-story{padding:15px 0}.related-description{font-size:12px}}
+@media print{.mobile-toc.is-floating{display:none}}
+
+/* The focusable wrapper owns horizontal scrolling, including on small screens. */
+.public-article .table-scroll{max-width:100%;overflow-x:auto;margin:28px 0;border:1px solid var(--line);border-radius:3px}
+.public-article .table-scroll>table,.public-article .engram-table-wrap>table{display:table;width:100%;min-width:100%;max-width:none;overflow:visible}

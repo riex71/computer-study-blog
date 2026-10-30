@@ -16,8 +16,30 @@
   updateSaved();
   addEventListener('storage',event=>{if(event.key==='studybase.reading.v1'){saved=readSaved();updateSaved();filterPosts(false);}if(event.key==='studybase.theme'){if(event.newValue==='dark')document.documentElement.dataset.theme='dark';else delete document.documentElement.dataset.theme;updateTheme();}});
   const normalize = value => value.normalize('NFKC').toLocaleLowerCase('ko-KR');
+  function highlightText(container,text,terms){
+    container.replaceChildren();
+    if(!terms.length){container.textContent=text;return;}
+    const pattern=new RegExp(terms.map(term=>term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'giu');
+    let cursor=0,match;
+    while((match=pattern.exec(text))){
+      container.append(document.createTextNode(text.slice(cursor,match.index)));
+      const mark=document.createElement('mark');mark.className='search-match';mark.textContent=match[0];container.append(mark);cursor=match.index+match[0].length;
+    }
+    container.append(document.createTextNode(text.slice(cursor)));
+  }
+  function searchExcerpt(post,terms){
+    if(!terms.length)return post.description;
+    const body=post.text||post.description,normalized=normalize(body);
+    const positions=terms.map(term=>normalized.indexOf(term)).filter(index=>index>=0);
+    if(!positions.length)return post.description;
+    const start=Math.max(0,Math.min(...positions)-35),end=start+155;
+    return (start?'…':'')+body.slice(start,end)+(body.length>end?'…':'');
+  }
+  $$('.site-nav a').forEach(link=>{const url=new URL(link.href);if(!url.hash&&url.pathname===location.pathname)link.setAttribute('aria-current','page');});
+
   const cards = $$('[data-post-card]');
-  let topic = '', savedOnly = false, searchContent = new Map();
+  const cardDescriptions=new Map(cards.map(card=>[card.dataset.slug,card.querySelector('.card-copy>p').textContent]));
+  let topic = '', savedOnly = false, searchContent = new Map(),searchPosts=new Map();
   const search = $('[data-search]'), sort = $('[data-sort]');
   function filterPosts(updateURL = true) {
     if (!search || !sort) return;
@@ -28,6 +50,9 @@
       const text = normalize(searchContent.get(card.dataset.slug) || card.dataset.searchText);
       const show = (!topic || JSON.parse(card.dataset.topics).includes(topic)) && (!savedOnly || saved.has(card.dataset.slug)) && terms.every(term => text.includes(term));
       card.hidden = !show; if (show) visible++;
+      highlightText(card.querySelector('h3 a'),card.dataset.title,terms);
+      const post=searchPosts.get(card.dataset.slug)||{description:cardDescriptions.get(card.dataset.slug)};
+      highlightText(card.querySelector('.card-copy>p'),searchExcerpt(post,terms),terms);
       $('[data-post-grid]').append(card);
     });
     $('[data-result-count]').textContent = `${visible}편의 글`;
@@ -52,39 +77,45 @@
     $('[data-reset-filters]').addEventListener('click', () => { search.value = ''; topic = ''; savedOnly = false; sort.value = 'newest'; filterPosts(); search.focus(); });
     document.addEventListener('keydown', event => { if (event.key === '/' && !event.ctrlKey && !event.metaKey && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) { event.preventDefault(); search.focus(); } });
     filterPosts(false);
-    fetch('search-index.json' + assetVersion).then(r => { if (!r.ok) throw new Error('Search index unavailable'); return r.json(); }).then(posts => { searchContent = new Map(posts.map(post => [post.slug, post.search])); filterPosts(false); }).catch(() => { /* Metadata search remains available when offline. */ });
+    fetch('search-index.json' + assetVersion).then(r => { if (!r.ok) throw new Error('Search index unavailable'); return r.json(); }).then(posts => { searchContent = new Map(posts.map(post => [post.slug, post.search]));searchPosts=new Map(posts.map(post=>[post.slug,post])); filterPosts(false); }).catch(() => { /* Metadata search remains available when offline. */ });
   }
   const siteRoot = new URL(document.body.dataset.page === 'article' ? '../' : './', location.href);
-  let globalIndex;
+  let globalIndex,globalIndexRequest,searchEpoch=0;
   const searchDialog = $('[data-search-dialog]');
   const globalSearch = $('[data-global-search]');
   const globalResults = $('[data-global-results]');
+  const globalStatus=$('[data-global-status]');
   async function searchAll() {
-    globalResults.textContent = '글을 찾는 중…';
+    const epoch=++searchEpoch,terms=normalize(globalSearch.value.trim()).split(/\s+/).filter(Boolean);
+    globalStatus.textContent='글을 찾는 중…';
     try {
-      globalIndex ||= await fetch(new URL('search-index.json' + assetVersion, siteRoot)).then(r => { if (!r.ok) throw Error(); return r.json(); });
-      const terms = normalize(globalSearch.value.trim()).split(/\s+/).filter(Boolean);
-      const matches = globalIndex.filter(p => terms.every(t => normalize(p.search).includes(t)));
+      globalIndexRequest ||= fetch(new URL('search-index.json'+assetVersion,siteRoot)).then(r=>{if(!r.ok)throw Error();return r.json();}).catch(error=>{globalIndexRequest=undefined;throw error;});
+      globalIndex ||= await globalIndexRequest;
+      if(epoch!==searchEpoch)return;
+      const matches=globalIndex.filter(post=>terms.every(term=>normalize(post.search).includes(term)));
       globalResults.replaceChildren();
-      for (const post of matches) {
-        const link = document.createElement('a'); link.href = new URL('posts/' + post.slug + '.html', siteRoot);
-        const date = document.createElement('small'); date.textContent = post.date + ' / ' + post.tags.slice(0, 3).join(' · ');
-        const title = document.createElement('h3'); title.textContent = post.title;
-        const excerpt = document.createElement('p');
-        const body = post.text || post.description;
-        const pos = terms.length ? normalize(body).indexOf(terms[0]) : -1;
-        const start = Math.max(0, pos - 35); excerpt.textContent = (start ? '…' : '') + body.slice(start, start + 145) + (body.length > start + 145 ? '…' : '');
-        link.append(date, title, excerpt); globalResults.append(link);
+      globalStatus.textContent=terms.length?`${matches.length}편의 글을 찾았습니다.`:`전체 ${matches.length}편 · 제목과 본문에서 검색합니다.`;
+      for(const post of matches){
+        const link=document.createElement('a');link.href=new URL('posts/'+post.slug+'.html',siteRoot);
+        const date=document.createElement('small');date.textContent=post.date+' · '+post.tags.slice(0,2).join(' · ');
+        const title=document.createElement('h3');highlightText(title,post.title,terms);
+        const excerpt=document.createElement('p');highlightText(excerpt,searchExcerpt(post,terms),terms);
+        link.append(date,title,excerpt);globalResults.append(link);
       }
-      if (!matches.length) globalResults.textContent = '일치하는 글이 없어요. 다른 단어로 찾아보세요.';
-    } catch { globalResults.textContent = '검색을 불러오지 못했습니다. 아카이브에서 글을 찾아주세요.'; }
+      if(!matches.length){const empty=document.createElement('p');empty.className='global-empty';empty.textContent='다른 검색어를 입력하거나 모든 글을 둘러보세요.';const archive=document.createElement('a');archive.href=new URL('archive.html',siteRoot);archive.textContent='모든 글 보기 →';globalResults.append(empty,archive);}
+    }catch{if(epoch===searchEpoch){globalStatus.textContent='검색을 불러오지 못했습니다.';globalResults.replaceChildren();const link=document.createElement('a');link.href=new URL('archive.html',siteRoot);link.textContent='아카이브에서 글 찾기 →';globalResults.append(link);}}
   }
-  $$('[data-open-search]').forEach(button => button.addEventListener('click', () => { searchDialog.showModal(); globalSearch.focus(); searchAll(); }));
+  function openSearch(){
+    $$('.reader-popover[open]').forEach(details=>{const focused=details.contains(document.activeElement);details.open=false;if(focused)details.querySelector('summary').focus({preventScroll:true});});
+    if(!searchDialog.open)searchDialog.showModal();globalSearch.focus();searchAll();
+  }
+  $$('[data-open-search]').forEach(button=>button.addEventListener('click',openSearch));
   $('[data-close-search]')?.addEventListener('click', () => searchDialog.close());
-  let globalTimer; globalSearch?.addEventListener('input', () => { clearTimeout(globalTimer); globalTimer = setTimeout(searchAll, 100); });
+  let globalTimer; globalSearch?.addEventListener('input', () => { ++searchEpoch;clearTimeout(globalTimer); globalTimer = setTimeout(searchAll, 100); });
+  searchDialog?.addEventListener('close',()=>{++searchEpoch;clearTimeout(globalTimer);});
   searchDialog?.addEventListener('click', e => { if (e.target === searchDialog && (e.clientX < searchDialog.getBoundingClientRect().left || e.clientX > searchDialog.getBoundingClientRect().right || e.clientY < searchDialog.getBoundingClientRect().top || e.clientY > searchDialog.getBoundingClientRect().bottom)) searchDialog.close(); });
   document.addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && searchDialog) { e.preventDefault(); if (!searchDialog.open) searchDialog.showModal(); globalSearch.focus(); searchAll(); }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && searchDialog) { e.preventDefault();openSearch(); }
     if (!searchDialog?.open) return;
     const links = [...globalResults.querySelectorAll('a')]; const current = links.indexOf(document.activeElement);
     if (e.key === 'ArrowDown' && links.length) { e.preventDefault(); links[Math.min(current + 1, links.length - 1)].focus(); }
@@ -93,6 +124,7 @@
   });
   $$('.reader-popover').forEach(details=>details.addEventListener('toggle',()=>{if(details.open)$$('.reader-popover').filter(other=>other!==details).forEach(other=>other.open=false);}));
   document.addEventListener('keydown',event=>{if(event.key==='Escape'){const details=document.activeElement?.closest('.reader-popover');if(details?.open){details.open=false;details.querySelector('summary').focus();}}});
+  document.addEventListener('pointerdown',event=>{$$('.reader-popover[open]').filter(details=>!details.contains(event.target)).forEach(details=>details.open=false);});
   const article = document.body.dataset.page === 'article' ? $('.public-article') : null;
   if (article) {
     let font = Number(storage.get('studybase.font', '0')) || 0;
@@ -115,9 +147,23 @@
     });
     zoom.addEventListener('click', e => { if (e.target === zoom) zoom.close(); });
     article.querySelectorAll('pre').forEach(pre => { const wrapper = document.createElement('div'); wrapper.className = 'code-wrap'; pre.before(wrapper); wrapper.append(pre); const copy = document.createElement('button'); copy.className = 'copy-code'; copy.textContent = '복사'; copy.type = 'button'; copy.addEventListener('click', async () => { try { await navigator.clipboard.writeText(pre.textContent); toast('코드를 복사했어요.'); } catch { toast('코드를 선택해서 복사해 주세요.'); } }); wrapper.append(copy); });
+    article.querySelectorAll('table').forEach(table=>{
+      if(table.parentElement.matches('.engram-table-wrap,.table-scroll'))return;
+      const wrapper=document.createElement('div');wrapper.className='table-scroll';wrapper.tabIndex=0;wrapper.setAttribute('role','region');wrapper.setAttribute('aria-label',(table.querySelector('caption')?.textContent.trim()||'본문 표')+', 가로 스크롤 가능');table.before(wrapper);wrapper.append(table);
+    });
+    const mobileToc=$('.mobile-toc'),articleTools=$('.article-tools');
+    const compactScreen=matchMedia('(max-width:1179px)');
+    const floatToc=()=>{
+      if(!mobileToc||mobileToc.hidden)return;
+      const headerHeight=$('.site-header')?.offsetHeight||72;
+      const floating=compactScreen.matches&&articleTools.getBoundingClientRect().bottom<headerHeight+8&&article.getBoundingClientRect().bottom>headerHeight+140;
+      if(mobileToc.classList.contains('is-floating')===floating)return;
+      if(mobileToc.open){const focused=mobileToc.contains(document.activeElement);mobileToc.open=false;if(focused)mobileToc.querySelector('summary').focus({preventScroll:true});}
+      mobileToc.classList.toggle('is-floating',floating);
+    };
     const bar = $('[data-reading-progress]'), label = $('[data-progress-label]'), tocProgress=$$('[data-toc-progress]');
     let scheduled = false;
-    const progress = () => { const start = article.getBoundingClientRect().top + scrollY - 100; const length = Math.max(1, article.offsetHeight - innerHeight + 150); const value = Math.max(0, Math.min(1, (scrollY - start) / length)); if (bar) bar.style.transform = `scaleX(${value})`;tocProgress.forEach(fill=>fill.style.transform=`scaleX(${value})`); if (label) label.textContent = `${Math.round(value * 100)}%`; scheduled = false; };
+    const progress = () => {floatToc(); const start = article.getBoundingClientRect().top + scrollY - 100; const length = Math.max(1, article.offsetHeight - innerHeight + 150); const value = Math.max(0, Math.min(1, (scrollY - start) / length)); if (bar) bar.style.transform = `scaleX(${value})`;tocProgress.forEach(fill=>fill.style.transform=`scaleX(${value})`); if (label) label.textContent = `${Math.round(value * 100)}%`; scheduled = false; };
     addEventListener('scroll', () => { if (!scheduled) { scheduled = true; requestAnimationFrame(progress); } }, { passive: true }); addEventListener('resize', progress); progress();
     const headings = [...article.querySelectorAll('h2[id]')];
     const tocGroups=$$('.toc-track').map(track=>({track,nav:track.closest('nav'),links:[...track.querySelectorAll('[data-toc-link]')],active:null}));
