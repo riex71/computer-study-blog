@@ -6,8 +6,9 @@ OUT = ROOT / '_site'
 if OUT.exists(): shutil.rmtree(OUT)
 OUT.mkdir()
 for file in ROOT.iterdir():
+    if file.name in {'package.json','package-lock.json'}: continue
     if file.is_file() and (file.suffix in {'.html','.css','.js','.mjs','.json','.xml','.txt'} or file.name == '.nojekyll'):
         shutil.copy2(file, OUT / file.name)
-for name in ['posts','assets','content']:
+for name in ['posts','assets','content','examples']:
     shutil.copytree(ROOT/name, OUT/name)
 print('Packaged public files in _site/')

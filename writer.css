@@ -18,3 +18,30 @@ textarea{font:inherit;color:inherit;resize:vertical}button,input,textarea,select
   .editor-panes[data-mode=split] .preview-pane .public-article p,.editor-panes[data-mode=split] .preview-pane .public-article li{font-size:15px}
 }
 @media(max-width:899px){button[data-mode=split]{display:none}}
+
+/* Preview shares publication type sizes; the full view also shares its width. */
+.writer-layout{max-width:840px}
+.preview-pane .public-article p,.preview-pane .public-article li{font-size:17px;line-height:2}
+.preview-pane h1{font-size:35px;line-height:1.5;letter-spacing:-1.2px;margin:15px 0 20px}
+.preview-pane>p{font-size:15px;line-height:1.95;margin:0 0 35px}
+.preview-pane .public-article h2{font-size:25px;line-height:1.65}
+.preview-pane .public-article h3{font-size:20px;line-height:1.65}
+.preview-pane .public-article figure{margin:32px 0}
+.revision-field{margin-top:20px}
+@media(min-width:900px){
+ .editor-panes[data-mode=split] .preview-pane .public-article p,.editor-panes[data-mode=split] .preview-pane .public-article li{font-size:17px}
+ .editor-panes[data-mode=split] .preview-pane h1{font-size:35px}
+ .editor-panes[data-mode=split] .preview-pane .public-article h2{font-size:25px}
+}
+@media(max-width:600px){
+ .preview-pane .public-article p,.preview-pane .public-article li{font-size:16px}
+ .preview-pane h1{font-size:29px;line-height:1.5;letter-spacing:-.9px}
+ .preview-pane>p{font-size:13px}
+ .preview-pane .public-article h2{font-size:22px}
+}
+.markdown-pane textarea.is-drop-target{outline:2px dashed var(--accent);outline-offset:6px;background:var(--wash)}
+.history-dialog{width:min(800px,calc(100% - 32px))}
+.history-list{display:flex;gap:8px;overflow-x:auto;padding:3px 0 14px;scrollbar-width:thin}
+.history-list button{flex-shrink:0;border:1px solid var(--line);border-radius:3px;background:none;padding:8px 10px;color:var(--muted);font-size:11px}
+.history-list button[aria-pressed=true]{border-color:var(--accent);color:var(--ink);background:var(--wash)}
+#history-source{display:block;width:100%;height:36vh;min-height:180px;margin:12px 0 18px;padding:14px;resize:vertical;font:13px/1.9 var(--mono);background:var(--wash);border:1px solid var(--line);border-radius:3px;white-space:pre-wrap;overflow-wrap:anywhere}

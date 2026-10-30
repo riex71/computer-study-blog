@@ -12,7 +12,7 @@ const base=process.argv[2]||'http://127.0.0.1:8765/';
  try{
   await page.goto(base+'posts/engram-conditional-memory.html');
   const sidebar=page.locator('.article-toc'),links=sidebar.locator('[data-toc-link]');
-  ok('Desktop contents lists every article section',await sidebar.isVisible()&&await links.count()===await page.locator('.public-article h2[id]').count());
+  ok('Desktop contents lists every article section',await sidebar.isVisible()&&await links.count()===await page.locator('.public-article h2[id],.public-article h3[id]').count());
   ok('Contents sits beside the article',await sidebar.evaluate(e=>e.getBoundingClientRect().left>document.querySelector('.article-layout').getBoundingClientRect().right));
   await shot('navigation-article-desktop.png');
   const target=await links.nth(2).getAttribute('href');await links.nth(2).click();

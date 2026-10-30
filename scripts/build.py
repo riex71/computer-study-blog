@@ -1,4 +1,4 @@
-"""Build the public blog from canonical article HTML and content/posts.json."""
+"""Compile Markdown, then build public pages from its generated HTML."""
 from pathlib import Path
 from html import escape
 from html.parser import HTMLParser
@@ -9,15 +9,22 @@ import json
 import math
 import os
 import re
+import subprocess
+import shutil
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent.parent
+node = os.environ.get('STUDYBASE_NODE') or shutil.which('node') or shutil.which('node.exe')
+assert node, 'Node.js 24.15+ is required. Run npm ci before building.'
+compiler = ROOT / 'scripts/markdown.cjs'
+if str(node).endswith('.exe') and str(compiler).startswith('/mnt/'):
+    compiler = subprocess.check_output(['wslpath', '-w', str(compiler)], text=True).strip()
+subprocess.run([node, str(compiler)], cwd=ROOT, check=True)
 BASE = 'https://riex71.github.io/computer-study-blog'
 AUTHOR = '윤동현'
-outline_path=ROOT/'content/outlines.json'
-OUTLINES=json.loads(outline_path.read_text(encoding='utf-8')) if outline_path.exists() else {}
+OUTLINES={}
 POSTS = sorted(json.loads((ROOT / 'content/posts.json').read_text(encoding='utf-8')), key=lambda p: p['date'], reverse=True)
-VERSION = hashlib.sha256(b''.join((ROOT / p).read_bytes() for p in ['blog.css', 'reader.css', 'blog.js', 'article-math.js', 'assets/vendor/katex/katex.min.js', 'assets/vendor/katex/katex.min.css'])).hexdigest()[:12]
+VERSION = hashlib.sha256(b''.join((ROOT / p).read_bytes() for p in ['blog.css', 'reader.css', 'blog.js', 'article-math.js', 'article-labs.js', 'assets/vendor/katex/katex.min.js', 'assets/vendor/katex/katex.min.css'])).hexdigest()[:12]
 BOOKMARK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4z"/></svg>'
 class Plain(HTMLParser):
     def __init__(self):
@@ -49,9 +56,10 @@ def footer(prefix=''):
 def dialogs():
     return '''<dialog class="search-dialog" data-search-dialog aria-labelledby="global-search-title"><div class="dialog-top"><label id="global-search-title" for="global-search">어떤 개념을 찾고 있나요?</label><button data-close-search type="button" aria-label="검색 닫기">닫기 · Esc</button></div><input id="global-search" type="search" data-global-search placeholder="제목, 태그, 본문 검색" autocomplete="off" maxlength="200" aria-describedby="global-search-status"><p class="search-status" data-global-status id="global-search-status" role="status" aria-live="polite"></p><div class="global-results" data-global-results></div><p class="dialog-hint">↑ ↓ 결과 이동 · Enter 열기</p></dialog><div class="blog-toast" data-toast role="status" aria-live="polite"></div>'''
 
-def head(title, description, path='', noindex=False):
+def head(title, description, path='', noindex=False, image='assets/social-cover.png'):
     url = BASE + '/' + path
-    return f'''<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{escape(title)} — Studybase</title><meta name="description" content="{attr(description)}"><meta name="theme-color" content="#f7f6f2">{'<meta name="robots" content="noindex">' if noindex else ''}<link rel="canonical" href="{url}"><meta property="og:type" content="website"><meta property="og:title" content="{attr(title)}"><meta property="og:description" content="{attr(description)}"><meta property="og:url" content="{url}"><meta property="og:image" content="{BASE}/assets/social-cover.png"><meta name="twitter:card" content="summary_large_image"><link rel="alternate" type="application/rss+xml" title="Studybase RSS" href="feed.xml"><link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400&family=Noto+Sans+KR:wght@400&display=swap" rel="stylesheet"><script>try{{if(localStorage.getItem('studybase.theme')==='dark')document.documentElement.dataset.theme='dark'}}catch(e){{}}</script><link rel="stylesheet" href="blog.css?v={VERSION}"><script src="blog.js?v={VERSION}" defer></script>'''
+    image_url = image if image.startswith('https://') else BASE + '/' + image
+    return f'''<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{escape(title)} — Studybase</title><meta name="description" content="{attr(description)}"><meta name="theme-color" content="#f7f6f2">{'<meta name="robots" content="noindex">' if noindex else ''}<link rel="canonical" href="{url}"><meta property="og:type" content="website"><meta property="og:title" content="{attr(title)}"><meta property="og:description" content="{attr(description)}"><meta property="og:url" content="{url}"><meta property="og:image" content="{attr(image_url)}"><meta name="twitter:card" content="summary_large_image"><link rel="alternate" type="application/rss+xml" title="Studybase RSS" href="feed.xml"><link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400&family=Noto+Sans+KR:wght@400&display=swap" rel="stylesheet"><script>try{{if(localStorage.getItem('studybase.theme')==='dark')document.documentElement.dataset.theme='dark'}}catch(e){{}}</script><link rel="stylesheet" href="blog.css?v={VERSION}"><script src="blog.js?v={VERSION}" defer></script>'''
 
 def save_button(slug, label=False):
     return f'<button type="button" class="save-button" data-save="{attr(slug)}" aria-label="읽기 목록에 저장" aria-pressed="false">{BOOKMARK}' + ('<span data-save-label>나중에 읽기</span>' if label else '') + '</button>'
@@ -98,7 +106,7 @@ def page(filename, title, description, content, page_type='archive'):
 
 archive = f'''<section class="page-intro"><h1>모든 글</h1><p>제목부터 본문까지, 궁금한 개념으로 찾아보세요.</p></section><section id="archive" class="archive archive-page"><div class="archive-controls" data-search-controls hidden><div class="search-row"><label class="blog-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><span class="sr-only">공개 글 제목, 태그, 본문 검색</span><input type="search" data-search placeholder="궁금한 개념을 찾아보세요" autocomplete="off" maxlength="200"><kbd>/</kbd></label><label class="sort-label"><span class="sr-only">글 정렬</span><select data-sort><option value="newest">최근 글부터</option><option value="oldest">처음 쓴 글부터</option><option value="title">제목순</option></select></label></div><div class="filter-row"><div class="topic-filters" aria-label="글 주제">{filters}</div><button class="saved-filter" type="button" data-saved-filter aria-pressed="false">{BOOKMARK}저장한 글</button></div></div><div class="archive-view-row"><span class="article-count" data-result-count>{len(POSTS)}편의 글</span></div><noscript><p class="quiet">모든 공개 글을 아래에서 읽을 수 있습니다. 검색과 읽기 목록은 JavaScript가 필요합니다.</p></noscript><div class="post-grid" data-post-grid>{''.join(card(p) for p in POSTS)}</div><div class="search-empty" data-search-empty hidden><p>아직 일치하는 기록이 없어요.</p><span>다른 검색어를 입력하거나 모든 글을 둘러보세요.</span><button class="text-button" data-reset-filters type="button">모든 글 보기 ↗</button></div><p class="sr-only" data-search-status role="status" aria-live="polite"></p></section>'''
 page('archive.html', '아카이브', '주제와 키워드로 찾는 AI 공부 기록', archive)
-series = '''<section class="page-intro"><h1>모델은 어떻게 기억할까</h1><p>같은 ‘기억’이라는 단어를 쓰지만, 저장하는 것과 꺼내 쓰는 방법은 다릅니다.<br>상태를 갱신하는 Mamba에서 주소로 조회하는 Engram으로 이어 읽습니다.</p></section><div class="series-layout"><aside><p class="eyebrow">읽기 전에</p><p>벡터와 행렬 곱, 신경망의 층 개념을 알고 있다면 시작할 수 있습니다. SSM을 처음 접한다면 첫 글의 상태 갱신식부터 천천히 읽어보세요.</p><a href="archive.html?topic=메모리">메모리 주제로 더 찾기 ↗</a></aside><div class="series-steps"><section><span class="path-number">01</span><h2>무엇을 기억하고 잊을까</h2><p>Mamba는 입력에 따라 상태 갱신 방식을 바꿉니다. 이전 토큰을 모두 보관하는 대신, 과거 정보를 상태에 압축하는 설계와 그 대가를 살펴봅니다.</p><a class="text-link" href="posts/mamba-selective-ssm.html">Mamba 읽기 <span>↗</span></a></section><section><span class="path-number">02</span><h2>무엇을 계산하고 찾아올까</h2><p>Engram은 짧은 토큰 패턴으로 메모리 주소를 정하고, 조회한 벡터를 현재 문맥에 맞춰 결합합니다. 상태 갱신과는 다른 ‘기억’의 역할을 읽습니다.</p><a class="text-link" href="posts/engram-conditional-memory.html">Engram 읽기 <span>↗</span></a></section><section><span class="path-number">03</span><h2>두 글을 읽고 남길 질문</h2><ul><li>입력이 달라지면 저장된 값이 바뀌는가, 조회하는 주소가 바뀌는가?</li><li>긴 문맥을 처리하는 비용은 어디에서 발생하는가?</li><li>논문의 성능 비교에서 학습량과 추론 비용은 어떻게 통제됐는가?</li></ul><p>RAG의 외부 문서 검색, 대화 기록 저장, recurrent state도 구분해 보세요.</p><a class="text-link" href="posts/engram-conditional-memory.html#related">개념 비교로 돌아가기 <span>↗</span></a></section></div></div>'''
+series = '''<section class="page-intro"><h1>모델은 어떻게 기억할까</h1><p>같은 ‘기억’이라는 단어를 쓰지만, 저장하는 것과 꺼내 쓰는 방법은 다릅니다.<br>상태를 갱신하는 Mamba에서 주소로 조회하는 Engram으로 이어 읽습니다.</p></section><div class="series-layout"><aside><p class="eyebrow">읽기 전에</p><p>벡터와 행렬 곱, 신경망의 층 개념을 알고 있다면 시작할 수 있습니다. SSM을 처음 접한다면 첫 글의 상태 갱신식부터 천천히 읽어보세요.</p><a href="archive.html?topic=메모리">메모리 주제로 더 찾기 ↗</a></aside><div class="series-steps"><section><span class="path-number">01</span><h2>무엇을 기억하고 잊을까</h2><p>Mamba는 입력에 따라 상태 갱신 방식을 바꿉니다. 이전 토큰을 모두 보관하는 대신, 과거 정보를 상태에 압축하는 설계와 그 대가를 살펴봅니다.</p><p>읽은 뒤에는 상태 갱신식의 각 항을 설명하고, 고정 계수와 입력별 선택의 차이를 작은 Python 예제로 확인할 수 있습니다.</p><a class="text-link" href="posts/mamba-selective-ssm.html">Mamba 읽기 <span>↗</span></a></section><section><span class="path-number">02</span><h2>무엇을 계산하고 찾아올까</h2><p>Engram은 짧은 토큰 패턴으로 메모리 주소를 정하고, 조회한 벡터를 현재 문맥에 맞춰 결합합니다. 상태 갱신과는 다른 ‘기억’의 역할을 읽습니다.</p><p>해시 테이블과 N-gram을 처음 접해도 토큰 예제부터 따라갈 수 있습니다. 읽은 뒤에는 주소를 정하는 과정과 조회 결과의 반영량을 정하는 과정을 구분해 보세요.</p><a class="text-link" href="posts/engram-conditional-memory.html">Engram 읽기 <span>↗</span></a></section><section><span class="path-number">03</span><h2>두 글을 읽고 남길 질문</h2><ul><li>입력이 달라지면 저장된 값이 바뀌는가, 조회하는 주소가 바뀌는가?</li><li>긴 문맥을 처리하는 비용은 어디에서 발생하는가?</li><li>논문의 성능 비교에서 학습량과 추론 비용은 어떻게 통제됐는가?</li></ul><p>RAG의 외부 문서 검색, 대화 기록 저장, recurrent state도 구분해 보세요.</p><a class="text-link" href="posts/engram-conditional-memory.html#related">개념 비교로 돌아가기 <span>↗</span></a></section></div></div>'''
 page('series.html', '이어 읽기 — 모델은 어떻게 기억할까', 'Mamba와 Engram을 연결하는 읽기 가이드', series, 'series')
 
 def toc_title(value):
@@ -130,13 +138,17 @@ for post in POSTS:
     others = sorted((p for p in POSTS if p['slug'] != post['slug']), key=lambda p: len(set(p['topics']) & set(post['topics'])), reverse=True)
     related = ''.join(f'<a class="related-story" href="{p["slug"]}.html"><span><small>{escape(" · ".join(t for t in p["topics"] if t in post["topics"]) or p["category"])} · {p["minutes"]}분 읽기</small><span class="related-title">{escape(p["title"])}</span><span class="related-description">{escape(p["description"])}</span></span><span aria-hidden="true">↗</span></a>' for p in others[:2])
     url = BASE + '/posts/' + post['slug'] + '.html'
-    schema = {'@context': 'https://schema.org', '@type': 'BlogPosting', 'headline': post['title'], 'description': post['description'], 'datePublished': post['date'], 'dateModified': post.get('updated', post['date']), 'author': {'@type': 'Person', 'name': AUTHOR, 'url': BASE+'/#about'}, 'mainEntityOfPage': url, 'image': BASE+'/assets/social-cover.png', 'inLanguage': 'ko-KR'}
+    schema = {'@context': 'https://schema.org', '@type': 'BlogPosting', 'headline': post['title'], 'description': post['description'], 'datePublished': post['date'], 'dateModified': post.get('updated', post['date']), 'author': {'@type': 'Person', 'name': AUTHOR, 'url': BASE+'/#about'}, 'mainEntityOfPage': url, 'image': BASE+'/'+post.get('socialImage','assets/social-cover.png'), 'inLanguage': 'ko-KR'}
     extra_css = f'<link rel="stylesheet" href="engram.css?v={VERSION}">' if post['slug'].startswith('engram') else ''
-    article_head = head(post['title'], post['description'], 'posts/'+post['slug']+'.html')
+    article_head = head(post['title'], post['description'], 'posts/'+post['slug']+'.html', image=post.get('socialImage','assets/social-cover.png'))
     article_head = article_head.replace('href="feed.xml"','href="../feed.xml"').replace('href="assets/', 'href="../assets/').replace('href="blog.css', 'href="../blog.css').replace('src="blog.js', 'src="../blog.js').replace('content="website"', 'content="article"')
     article_head += f'<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css?v={VERSION}"><script src="../assets/vendor/katex/katex.min.js?v={VERSION}" defer></script><script src="../article-math.js?v={VERSION}" defer></script>'
+    article_head += f'<script src="../article-labs.js?v={VERSION}" defer></script>'
+    revision = ''
+    if post.get('updated'):
+        revision = f'<p class="article-revision">수정 <time datetime="{attr(post["updated"])}">{escape(post["updated"].replace("-","."))}</time>' + (' · '+escape(post['revisionNote']) if post.get('revisionNote') else '') + '</p>'
     article_page=(ROOT/'templates/article.html').read_text(encoding='utf-8')
-    values={'HEAD':article_head+extra_css+f'<link rel="stylesheet" href="../reader.css?v={VERSION}"><script type="application/ld+json">{js(schema)}</script>','BODY_CLASS':'engram-article-page' if post['slug'].startswith('engram') else '', 'HEADER':header('../'),'FOOTER':footer('../'),'DIALOGS':dialogs(),'TITLE':escape(post['title']),'DECK':escape(post.get('deck',post['description'])),'DATE':attr(post['date']),'DISPLAY_DATE':post['date'].replace('-','.'),'MINUTES':str(post['minutes']),'SLUG':post['slug'],'TOC':toc,'TOC_COUNT':str(section_count).zfill(2),'TOC_HIDDEN':'' if section_count else ' hidden','SAVE':save_button(post['slug'],True),'BODY':body,'RELATED':related}
+    values={'HEAD':article_head+extra_css+f'<link rel="stylesheet" href="../reader.css?v={VERSION}"><script type="application/ld+json">{js(schema)}</script>','BODY_CLASS':'engram-article-page' if post['slug'].startswith('engram') else '', 'HEADER':header('../'),'FOOTER':footer('../'),'DIALOGS':dialogs(),'TITLE':escape(post['title']),'DECK':escape(post.get('deck',post['description'])),'REVISION':revision,'DATE':attr(post['date']),'DISPLAY_DATE':post['date'].replace('-','.'),'MINUTES':str(post['minutes']),'SLUG':post['slug'],'TOC':toc,'TOC_COUNT':str(section_count).zfill(2),'TOC_HIDDEN':'' if section_count else ' hidden','SAVE':save_button(post['slug'],True),'BODY':body,'RELATED':related}
     for key,value in values.items():article_page=article_page.replace('{{'+key+'}}',value)
     assert '{{' not in article_page
     (ROOT / 'posts' / (post['slug'] + '.html')).write_text(article_page, encoding='utf-8')
@@ -158,6 +170,6 @@ ET.indent(urlset);ET.ElementTree(urlset).write(ROOT/'sitemap.xml',encoding='utf-
 if os.environ.get('GITHUB_SHA'):
     (ROOT/'build.json').write_text(json.dumps({'commit':os.environ['GITHUB_SHA'],'builtAt':datetime.now(timezone.utc).isoformat()}),encoding='utf-8')
 editor_template = (ROOT/'templates/write.html').read_text(encoding='utf-8')
-editor_version = hashlib.sha256((editor_template + ''.join((ROOT/p).read_text(encoding='utf-8') for p in ['writer.mjs','writer.css','editor-content.js','article-math.js','publisher.mjs','draft-store.mjs','assets/vendor/THIRD_PARTY.md'])).encode()).hexdigest()[:12]
+editor_version = hashlib.sha256((editor_template + ''.join((ROOT/p).read_text(encoding='utf-8') for p in ['writer.mjs','writer.css','editor-content.js','article-math.js','publisher.mjs','draft-store.mjs','article-labs.js','reader.css','posts/engram.css','assets/vendor/THIRD_PARTY.md'])).encode()).hexdigest()[:12]
 (ROOT/'write.html').write_text(editor_template.replace('{{EDITOR_VERSION}}', editor_version),encoding='utf-8')
 print(f'Built {len(POSTS)} posts, home, archive, series, search, RSS and sitemap. Version {VERSION}')

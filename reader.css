@@ -72,3 +72,37 @@
 .article-toc .toc-heading svg,.article-toc .toc-heading .toc-position,.article-toc .toc-progress{display:none}
 .article-toc .toc-top{border:0;margin:12px 0 0 8px;padding:9px 0}
 .public-article h3{scroll-margin-top:12px}
+
+.article-revision{font-size:11px;line-height:1.9;color:var(--muted);margin:18px 0 0}
+.math-display{font-size:var(--reading-size,17px)}
+.engram-article-page table.article-table{font-size:13px;line-height:1.8}
+.engram-article-page table.article-table caption{padding:16px;text-align:left;color:var(--muted);font-size:12px}
+.engram-article-page table.article-table th,.engram-article-page table.article-table td{padding:13px 16px;white-space:nowrap;font-weight:400}
+.engram-article-page table.article-table td{text-align:right;font-variant-numeric:tabular-nums}
+.engram-article-page table.article-table thead{background:var(--surface-soft)}
+.engram-hash-demo{margin:30px 0;padding:22px;border:1px solid var(--line);border-radius:4px;background:var(--wash)}
+.public-article .engram-hash-demo>p{font-size:13px;line-height:1.9;margin:0 0 16px}
+.public-article .engram-hash-demo>p:last-child{font-size:11px;color:var(--muted);margin:15px 0 0}
+.lab-controls{display:flex;flex-wrap:wrap;gap:15px;margin-bottom:18px}
+.lab-controls label,.lab-input{font-size:12px;line-height:1.9;color:var(--muted)}
+.lab-controls select{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line-strong);border-radius:3px;padding:5px 10px;margin-left:8px}
+.lab-input{display:block;margin-bottom:14px}
+.lab-input input{display:block;width:100%;margin-top:7px;font:13px/1.9 var(--mono);color:var(--ink);background:var(--paper);border:1px solid var(--line-strong);border-radius:3px;padding:9px 12px}
+.lab-table{max-width:100%;overflow:auto;background:var(--paper)}
+.public-article .lab-table table{display:table;width:100%;margin:0}
+.lab-table caption{font-size:11px;text-align:left;padding:10px;color:var(--muted)}
+.lab-table th,.lab-table td{white-space:nowrap;font-variant-numeric:tabular-nums}
+.lab-table:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:600px){.engram-hash-demo{padding:16px}.lab-controls{gap:12px}}
+@media print{
+ :root,:root[data-theme=dark]{color-scheme:light;--paper:#fff;--surface:#fff;--ink:#111;--muted:#444;--line:#ccc;--wash:#fff;--accent:#111}
+ .site-header,.site-footer,.article-tools,.toc-rail,.reading-progress,.article-end,.copy-code,.blog-toast,.search-dialog,.figure-dialog{display:none!important}
+ .reading-shell{max-width:none;padding:0;margin:0}.article-header h1{font-size:25pt}
+ .public-article p,.public-article li,.reading-shell .public-article p,.reading-shell .public-article li{font-size:11pt;line-height:1.8}
+ .public-article h2,.public-article h3{break-after:avoid}.public-article figure{break-inside:avoid}
+ .public-article pre{white-space:pre-wrap;overflow-wrap:anywhere;overflow:visible}
+ .public-article .table-scroll,.public-article .engram-table-wrap,.public-article table{overflow:visible;max-width:100%}
+ .public-article table{font-size:9pt}.public-article td,.public-article th{padding:6px 8px}
+ .math-display{overflow:visible}.engram-hash-demo{display:none}
+ .article-sources a{overflow-wrap:anywhere}
+}
