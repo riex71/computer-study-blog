@@ -6,7 +6,7 @@ const initialParams = new URLSearchParams(location.search);
 const requestedEdit = initialParams.get('edit'), requestedDraft = initialParams.get('draft');
 let draft, drafts = [], posts = [], publisher, busy = false, pending = 0, storageFailed = false, pollTimer, deploymentEpoch=0, saveQueue=Promise.resolve();
 const versions=new Map(),aliases=new Map(),unsaved=new Map(),draftStore=new DraftStore();
-const channel=typeof BroadcastChannel==='function'?new BroadcastChannel('studybase.writer.updates'):null;
+const channel=(()=>{try{return typeof BroadcastChannel==='function'?new BroadcastChannel('studybase.writer.updates'):null;}catch{return null;}})();
 const message = text => {
   const box=$('#writer-message');box.replaceChildren();if(!text)return;
   const span=document.createElement('span');span.textContent=text;
