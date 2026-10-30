@@ -180,7 +180,7 @@ async function loadPost(slug, force = false) {
     if (publisher) {
       const sha = await publisher.head(); posts = JSON.parse(await publisher.file('content/posts.json', sha)); populatePosts(); post = posts.find(p => p.slug === slug);
       if (!post) throw Error('공개 글을 찾을 수 없습니다.');
-      [markdown, html] = await Promise.all([publisher.file(post.sourceMarkdown, sha), publisher.file(post.sourceHtml, sha)]);
+      markdown = await publisher.file(post.sourceMarkdown, sha);html=EditorContent.compile(markdown);
     } else {
       post = posts.find(p => p.slug === slug); if (!post) throw Error('공개 글을 찾을 수 없습니다.');
       [markdown, html] = await Promise.all([publicFile(post.sourceMarkdown), publicFile(post.sourceHtml)]);

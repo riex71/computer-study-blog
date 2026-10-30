@@ -56,6 +56,12 @@ test('a branch advance during preparation never updates the ref',async()=>{
   assert.equal(api.calls.filter(c=>c.method==='PATCH').length,0);assert.equal(api.head(),'base');
  }finally{api.restore()}
 });
+test('Markdown-only repository edits can be published without depending on a stale HTML cache',async()=>{
+ const api=server({posts:[post],files:{[post.sourceMarkdown]:'latest Markdown',[post.sourceHtml]:'<p>stale generated cache</p>'}});try{
+  const result=await new GitHubPublisher('test-token').publish({post,markdown:'next Markdown',images:[],original:{post,markdown:'latest Markdown',html:'<p>current rendered Markdown</p>'}},'<p>next Markdown</p>');
+  assert.equal(result.sha,'new-commit');assert.equal(api.calls.some(c=>c.path.startsWith('contents/'+post.sourceHtml)),false);
+ }finally{api.restore()}
+});
 test('a race after the last check is rejected with no force update',async()=>{
  const api=server({rejectRef:true});try{
   await assert.rejects(()=>new GitHubPublisher('test-token').publish({post,markdown:'text',images:[]},'<p>text</p>'),/변경/);
