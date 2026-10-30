@@ -4,16 +4,17 @@
   const $$ = (s) => [...document.querySelectorAll(s)];
   const assetVersion = document.currentScript ? new URL(document.currentScript.src).search : '';
   const storage = { get(key, fallback) { try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; } }, set(key, value) { try { localStorage.setItem(key, value); return true; } catch { return false; } } };
-  let saved;
-  try { const value = JSON.parse(storage.get('studybase.reading.v1', '[]')); saved = new Set(Array.isArray(value) ? value.filter(x => typeof x === 'string') : []); } catch { saved = new Set(); }
+  function readSaved(fallback=[]){try{const value=JSON.parse(storage.get('studybase.reading.v1',JSON.stringify(fallback)));return new Set(Array.isArray(value)?value.filter(x=>typeof x==='string'):fallback);}catch{return new Set(fallback);}}
+  let saved=readSaved();
   let toastTimer;
   function toast(message) { const el = $('[data-toast]'); if (!el) return; clearTimeout(toastTimer); el.textContent = message; el.classList.add('show'); toastTimer = setTimeout(() => el.classList.remove('show'), 2400); }
   function updateTheme() { const dark = document.documentElement.dataset.theme === 'dark'; $$('[data-theme-toggle]').forEach(button => { button.setAttribute('aria-pressed', String(dark)); button.setAttribute('aria-label', dark ? '밝은 화면으로 변경' : '어두운 화면으로 변경'); }); }
   $$('[data-theme-toggle]').forEach(button => button.addEventListener('click', () => { const dark = document.documentElement.dataset.theme !== 'dark'; if (dark) document.documentElement.dataset.theme = 'dark'; else delete document.documentElement.dataset.theme; storage.set('studybase.theme', dark ? 'dark' : 'light'); updateTheme(); }));
   updateTheme();
   function updateSaved() { $$('[data-save]').forEach(button => { const active = saved.has(button.dataset.save); button.setAttribute('aria-pressed', String(active)); button.setAttribute('aria-label', active ? '읽기 목록에서 해제' : '읽기 목록에 저장'); const label = button.querySelector('[data-save-label]'); if (label) label.textContent = active ? '저장됨' : '나중에 읽기'; }); }
-  $$('[data-save]').forEach(button => button.addEventListener('click', () => { const slug = button.dataset.save; if (saved.has(slug)) saved.delete(slug); else saved.add(slug); const persisted = storage.set('studybase.reading.v1', JSON.stringify([...saved])); updateSaved(); filterPosts(); toast(persisted ? (saved.has(slug) ? '이 브라우저의 읽기 목록에 저장했어요.' : '읽기 목록에서 해제했어요.') : '브라우저 저장소를 사용할 수 없어 이 화면에서만 유지됩니다.'); }));
+  $$('[data-save]').forEach(button => button.addEventListener('click', () => { saved=readSaved([...saved]);const slug = button.dataset.save; if (saved.has(slug)) saved.delete(slug); else saved.add(slug); const persisted = storage.set('studybase.reading.v1', JSON.stringify([...saved])); updateSaved(); filterPosts(); toast(persisted ? (saved.has(slug) ? '이 브라우저의 읽기 목록에 저장했어요.' : '읽기 목록에서 해제했어요.') : '브라우저 저장소를 사용할 수 없어 이 화면에서만 유지됩니다.'); }));
   updateSaved();
+  addEventListener('storage',event=>{if(event.key==='studybase.reading.v1'){saved=readSaved();updateSaved();filterPosts(false);}if(event.key==='studybase.theme'){if(event.newValue==='dark')document.documentElement.dataset.theme='dark';else delete document.documentElement.dataset.theme;updateTheme();}});
   const normalize = value => value.normalize('NFKC').toLocaleLowerCase('ko-KR');
   const cards = $$('[data-post-card]');
   let topic = '', savedOnly = false, searchContent = new Map();
@@ -91,9 +92,9 @@
     if (e.key === 'Enter' && document.activeElement === globalSearch && links.length) { e.preventDefault(); links[0].click(); }
   });
   if ($('[data-post-grid]')) {
-    const setView = view => { $('[data-post-grid]').dataset.view = view; $$('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === view))); };
-    if ($('[data-view]')) setView(storage.get('studybase.archive-view', 'grid'));
-    $$('[data-view]').forEach(b => b.addEventListener('click', () => { setView(b.dataset.view); storage.set('studybase.archive-view', b.dataset.view); }));
+    const setView = view => { $('[data-post-grid]').dataset.view = view; $$('button[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === view))); };
+    if ($('button[data-view]')) setView(storage.get('studybase.archive-view', 'grid'));
+    $$('button[data-view]').forEach(b => b.addEventListener('click', () => { setView(b.dataset.view); storage.set('studybase.archive-view', b.dataset.view); }));
   }
   const article = document.body.dataset.page === 'article' ? $('.public-article') : null;
   if (article) {
@@ -107,9 +108,13 @@
     const close = document.createElement('button'); close.type = 'button'; close.textContent = '닫기 · Esc'; close.addEventListener('click', () => zoom.close());
     const zoomImg = document.createElement('img'), caption = document.createElement('p'); top.append(zoomTitle, close); zoom.append(top, zoomImg, caption); document.body.append(zoom);
     article.querySelectorAll('img').forEach(img => {
-      img.dataset.zoomable = ''; img.tabIndex = 0; img.setAttribute('role', 'button'); img.setAttribute('aria-label', (img.alt || '논문 그림') + ' 크게 보기');
+      img.dataset.zoomable = '';
+      let trigger=img.closest('a');
+      if(!trigger){trigger=document.createElement('button');trigger.type='button';trigger.className='figure-zoom-trigger';img.before(trigger);trigger.append(img);}
+      trigger.setAttribute('aria-haspopup','dialog');trigger.setAttribute('aria-label',(img.alt||'논문 그림')+' 크게 보기');
       const open = () => { zoomImg.src = img.currentSrc || img.src; zoomImg.alt = img.alt; caption.textContent = img.closest('figure')?.querySelector('figcaption')?.textContent || img.alt; zoom.showModal(); close.focus(); };
-      img.addEventListener('click', e => { e.preventDefault(); open(); }); img.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+      trigger.addEventListener('click',e=>{e.preventDefault();open();});
+      if(trigger.tagName==='A')trigger.addEventListener('keydown',e=>{if(e.key===' '){e.preventDefault();open();}});
     });
     zoom.addEventListener('click', e => { if (e.target === zoom) zoom.close(); });
     article.querySelectorAll('pre').forEach(pre => { const wrapper = document.createElement('div'); wrapper.className = 'code-wrap'; pre.before(wrapper); wrapper.append(pre); const copy = document.createElement('button'); copy.className = 'copy-code'; copy.textContent = '복사'; copy.type = 'button'; copy.addEventListener('click', async () => { try { await navigator.clipboard.writeText(pre.textContent); toast('코드를 복사했어요.'); } catch { toast('코드를 선택해서 복사해 주세요.'); } }); wrapper.append(copy); });

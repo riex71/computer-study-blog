@@ -131,6 +131,6 @@ ET.indent(urlset);ET.ElementTree(urlset).write(ROOT/'sitemap.xml',encoding='utf-
 if os.environ.get('GITHUB_SHA'):
     (ROOT/'build.json').write_text(json.dumps({'commit':os.environ['GITHUB_SHA'],'builtAt':datetime.now(timezone.utc).isoformat()}),encoding='utf-8')
 editor_template = (ROOT/'templates/write.html').read_text(encoding='utf-8')
-editor_version = hashlib.sha256((editor_template + ''.join((ROOT/p).read_text(encoding='utf-8') for p in ['writer.mjs','writer.css','editor-content.js','article-math.js','publisher.mjs','assets/vendor/THIRD_PARTY.md'])).encode()).hexdigest()[:12]
+editor_version = hashlib.sha256((editor_template + ''.join((ROOT/p).read_text(encoding='utf-8') for p in ['writer.mjs','writer.css','editor-content.js','article-math.js','publisher.mjs','draft-store.mjs','assets/vendor/THIRD_PARTY.md'])).encode()).hexdigest()[:12]
 (ROOT/'write.html').write_text(editor_template.replace('{{EDITOR_VERSION}}', editor_version),encoding='utf-8')
 print(f'Built {len(POSTS)} posts, home, archive, series, search, RSS and sitemap. Version {VERSION}')

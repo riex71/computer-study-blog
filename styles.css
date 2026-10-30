@@ -1,5 +1,5 @@
 :root {
-  --canvas: #f7f7f3; --surface: #ffffff; --surface-soft: #f0f1ec; --ink: #191a17; --muted: #70736a;
+  --canvas: #f7f7f3; --surface: #ffffff; --surface-soft: #f0f1ec; --ink: #191a17; --muted: #62685e;
   --line: #dedfd8; --line-strong: #c8cac1; --accent: #5d55e6; --accent-soft: #eeecff; --lime: #d8fa73;
   --danger: #c94242; --shadow: 0 24px 70px rgba(31, 31, 25, .14); --sans: "Noto Sans KR", sans-serif; --mono: "DM Mono", monospace;
 }
@@ -230,3 +230,4 @@ body.dark .empty-visual span, body.dark .empty-visual i { box-shadow: 7px 7px 0 
   .article-header h1 { font-size: 38px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+body.dark .workspace-icon{color:var(--accent)}

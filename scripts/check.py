@@ -3,6 +3,7 @@ from pathlib import Path
 from html.parser import HTMLParser
 from urllib.parse import urlsplit, unquote
 import json
+import re
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -34,9 +35,18 @@ for file, d in documents.items():
             if url.scheme or url.netloc:continue
             target=file.parent/unquote(url.path) if url.path else file
         target=target.resolve()
+        assert target.is_relative_to(ROOT.resolve()), f'Link leaves site root in {file.name}: {link}'
         assert target.exists(), f'Missing local link in {file.name}: {link}'
         fragment=urlsplit(link).fragment
         if fragment and target in documents:assert fragment in documents[target].ids,f'Missing anchor in {file.name}: {link}'
+
+for css in ROOT.rglob('*.css'):
+    if any(part in css.parts for part in ['.git','_site']):continue
+    for match in re.finditer(r'url\(\s*[\"\']?([^\)\"\']+)[\"\']?\s*\)',css.read_text(encoding='utf-8')):
+        url=urlsplit(match.group(1).strip())
+        if url.scheme or url.netloc or not url.path:continue
+        target=(css.parent/unquote(url.path)).resolve()
+        assert target.is_relative_to(ROOT.resolve()) and target.is_file(),f'Missing CSS asset in {css.name}: {url.path}'
 
 posts=json.loads((ROOT/'content/posts.json').read_text(encoding='utf-8'))
 assert len({p['slug'] for p in posts})==len(posts),'Duplicate post slugs'
@@ -48,4 +58,4 @@ for item in feed.findall('./channel/item'):
     assert item.findtext('link').startswith(BASE)
     assert (ROOT/item.findtext('link').removeprefix(BASE)).exists()
 ET.parse(ROOT/'sitemap.xml')
-print(f'Checked {len(documents)} pages, all local links/anchors/assets, {len(posts)} search records, RSS and sitemap.')
+print(f'Checked {len(documents)} pages, all local links/anchors/assets and CSS fonts, {len(posts)} search records, RSS and sitemap.')
