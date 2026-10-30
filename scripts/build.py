@@ -98,9 +98,13 @@ page('archive.html', '아카이브', '주제와 키워드로 찾는 AI 공부 �
 series = '''<section class="page-intro"><h1>모델은 어떻게 기억할까</h1><p>같은 ‘기억’이라는 단어를 쓰지만, 저장하는 것과 꺼내 쓰는 방법은 다릅니다.<br>상태를 갱신하는 Mamba에서 주소로 조회하는 Engram으로 이어 읽습니다.</p></section><div class="series-layout"><aside><p class="eyebrow">읽기 전에</p><p>벡터와 행렬 곱, 신경망의 층 개념을 알고 있다면 시작할 수 있습니다. SSM을 처음 접한다면 첫 글의 상태 갱신식부터 천천히 읽어보세요.</p><a href="archive.html?topic=메모리">메모리 주제로 더 찾기 ↗</a></aside><div class="series-steps"><section><span class="path-number">01</span><h2>무엇을 기억하고 잊을까</h2><p>Mamba는 입력에 따라 상태 갱신 방식을 바꿉니다. 이전 토큰을 모두 보관하는 대신, 과거 정보를 상태에 압축하는 설계와 그 대가를 살펴봅니다.</p><a class="text-link" href="posts/mamba-selective-ssm.html">Mamba 읽기 <span>↗</span></a></section><section><span class="path-number">02</span><h2>무엇을 계산하고 찾아올까</h2><p>Engram은 짧은 토큰 패턴으로 메모리 주소를 정하고, 조회한 벡터를 현재 문맥에 맞춰 결합합니다. 상태 갱신과는 다른 ‘기억’의 역할을 읽습니다.</p><a class="text-link" href="posts/engram-conditional-memory.html">Engram 읽기 <span>↗</span></a></section><section><span class="path-number">03</span><h2>두 글을 읽고 남길 질문</h2><ul><li>입력이 달라지면 저장된 값이 바뀌는가, 조회하는 주소가 바뀌는가?</li><li>긴 문맥을 처리하는 비용은 어디에서 발생하는가?</li><li>논문의 성능 비교에서 학습량과 추론 비용은 어떻게 통제됐는가?</li></ul><p>RAG의 외부 문서 검색, 대화 기록 저장, recurrent state도 구분해 보세요.</p><a class="text-link" href="posts/engram-conditional-memory.html#related">개념 비교로 돌아가기 <span>↗</span></a></section></div></div>'''
 page('series.html', '이어 읽기 — 모델은 어떻게 기억할까', 'Mamba와 Engram을 연결하는 읽기 가이드', series, 'series')
 
+def toc_title(value):
+    return re.sub(r'^\d{1,2}[.)]\s+', '', text(value))
+
 for post in POSTS:
     body = contents[post['slug']]
-    toc = ''.join(f'<a data-toc-link href="#{attr(m.group(1))}">{escape(text(m.group(2)))}</a>' for m in re.finditer(r'<h2[^>]*id="([^"]+)"[^>]*>([\s\S]*?)</h2>', body))
+    sections=list(re.finditer(r'<h2[^>]*id="([^"]+)"[^>]*>([\s\S]*?)</h2>', body))
+    toc = '<ol class="toc-list">'+''.join(f'<li><a data-toc-link href="#{attr(m.group(1))}"><span class="toc-number" aria-hidden="true">{i:02}</span><span class="toc-title">{escape(toc_title(m.group(2)))}</span></a></li>' for i,m in enumerate(sections,1))+'</ol>'
     others = sorted((p for p in POSTS if p['slug'] != post['slug']), key=lambda p: len(set(p['topics']) & set(post['topics'])), reverse=True)
     related = ''.join(f'<a class="related-story" href="{p["slug"]}.html"><span>{escape(p["title"])}</span><span aria-hidden="true">↗</span></a>' for p in others[:2])
     url = BASE + '/posts/' + post['slug'] + '.html'
@@ -110,7 +114,7 @@ for post in POSTS:
     article_head = article_head.replace('href="feed.xml"','href="../feed.xml"').replace('href="assets/', 'href="../assets/').replace('href="blog.css', 'href="../blog.css').replace('src="blog.js', 'src="../blog.js').replace('content="website"', 'content="article"')
     article_head += f'<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css?v={VERSION}"><script src="../assets/vendor/katex/katex.min.js?v={VERSION}" defer></script><script src="../article-math.js?v={VERSION}" defer></script>'
     article_page=(ROOT/'templates/article.html').read_text(encoding='utf-8')
-    values={'HEAD':article_head+extra_css+f'<link rel="stylesheet" href="../reader.css?v={VERSION}"><script type="application/ld+json">{js(schema)}</script>','BODY_CLASS':'engram-article-page' if post['slug'].startswith('engram') else '', 'HEADER':header('../'),'FOOTER':footer('../'),'DIALOGS':dialogs(),'TITLE':escape(post['title']),'DECK':escape(post.get('deck',post['description'])),'DATE':attr(post['date']),'DISPLAY_DATE':post['date'].replace('-','.'),'MINUTES':str(post['minutes']),'SLUG':post['slug'],'TOC':toc,'SAVE':save_button(post['slug'],True),'BODY':body,'RELATED':related}
+    values={'HEAD':article_head+extra_css+f'<link rel="stylesheet" href="../reader.css?v={VERSION}"><script type="application/ld+json">{js(schema)}</script>','BODY_CLASS':'engram-article-page' if post['slug'].startswith('engram') else '', 'HEADER':header('../'),'FOOTER':footer('../'),'DIALOGS':dialogs(),'TITLE':escape(post['title']),'DECK':escape(post.get('deck',post['description'])),'DATE':attr(post['date']),'DISPLAY_DATE':post['date'].replace('-','.'),'MINUTES':str(post['minutes']),'SLUG':post['slug'],'TOC':toc,'TOC_COUNT':str(len(sections)).zfill(2),'TOC_HIDDEN':'' if sections else ' hidden','SAVE':save_button(post['slug'],True),'BODY':body,'RELATED':related}
     for key,value in values.items():article_page=article_page.replace('{{'+key+'}}',value)
     assert '{{' not in article_page
     (ROOT / 'posts' / (post['slug'] + '.html')).write_text(article_page, encoding='utf-8')

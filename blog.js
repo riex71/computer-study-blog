@@ -115,13 +115,36 @@
     });
     zoom.addEventListener('click', e => { if (e.target === zoom) zoom.close(); });
     article.querySelectorAll('pre').forEach(pre => { const wrapper = document.createElement('div'); wrapper.className = 'code-wrap'; pre.before(wrapper); wrapper.append(pre); const copy = document.createElement('button'); copy.className = 'copy-code'; copy.textContent = '복사'; copy.type = 'button'; copy.addEventListener('click', async () => { try { await navigator.clipboard.writeText(pre.textContent); toast('코드를 복사했어요.'); } catch { toast('코드를 선택해서 복사해 주세요.'); } }); wrapper.append(copy); });
-    const bar = $('[data-reading-progress]'), label = $('[data-progress-label]');
+    const bar = $('[data-reading-progress]'), label = $('[data-progress-label]'), tocProgress=$$('[data-toc-progress]');
     let scheduled = false;
-    const progress = () => { const start = article.getBoundingClientRect().top + scrollY - 100; const length = Math.max(1, article.offsetHeight - innerHeight + 150); const value = Math.max(0, Math.min(1, (scrollY - start) / length)); if (bar) bar.style.transform = `scaleX(${value})`; if (label) label.textContent = `${Math.round(value * 100)}%`; scheduled = false; };
+    const progress = () => { const start = article.getBoundingClientRect().top + scrollY - 100; const length = Math.max(1, article.offsetHeight - innerHeight + 150); const value = Math.max(0, Math.min(1, (scrollY - start) / length)); if (bar) bar.style.transform = `scaleX(${value})`;tocProgress.forEach(fill=>fill.style.transform=`scaleX(${value})`); if (label) label.textContent = `${Math.round(value * 100)}%`; scheduled = false; };
     addEventListener('scroll', () => { if (!scheduled) { scheduled = true; requestAnimationFrame(progress); } }, { passive: true }); addEventListener('resize', progress); progress();
     const headings = [...article.querySelectorAll('h2[id]')];
-    const setActive = () => { let id = headings[0]?.id; for (const heading of headings) { if (heading.getBoundingClientRect().top <= 150) id = heading.id; else break; } $$('[data-toc-link]').forEach(link => { if (link.getAttribute('href') === `#${id}`) link.setAttribute('aria-current', 'location'); else link.removeAttribute('aria-current'); }); };
-    let tocScheduled = false; addEventListener('scroll', () => { if (!tocScheduled) { tocScheduled = true; requestAnimationFrame(() => { setActive(); tocScheduled = false; }); } }, { passive: true }); addEventListener('resize',setActive);setActive();
+    const tocGroups=$$('.toc-track').map(track=>({track,nav:track.closest('nav'),links:[...track.querySelectorAll('[data-toc-link]')],active:null}));
+    const setActive=()=>{
+      if(!headings.length)return;
+      let index=0;for(let i=0;i<headings.length;i++){if(headings[i].getBoundingClientRect().top<=150)index=i;else break;}
+      const id=headings[index]?.id;
+      $$('[data-toc-position]').forEach(label=>{label.textContent=String(index+1).padStart(2,'0')+' / '+String(headings.length).padStart(2,'0');label.setAttribute('aria-label',`전체 ${headings.length}개 절 중 ${index+1}번째 절`);});
+      for(const group of tocGroups){
+        const changed=group.active!==id;group.active=id;
+        for(const link of group.links){if(link.getAttribute('href')===`#${id}`)link.setAttribute('aria-current','location');else link.removeAttribute('aria-current');}
+        const active=group.links[index];if(!active||!group.track.getClientRects().length)continue;
+        const row=active.getBoundingClientRect(),track=group.track.getBoundingClientRect();
+        group.track.style.setProperty('--toc-marker-y',`${row.top-track.top+6}px`);
+        group.track.style.setProperty('--toc-marker-height',`${Math.max(14,row.height-12)}px`);group.track.dataset.tocReady='';
+        if(changed&&!group.nav.matches(':hover,:focus-within')){
+          const viewport=group.nav.getBoundingClientRect();
+          if(row.top<viewport.top+6)group.nav.scrollTop-=viewport.top-row.top+6;
+          else if(row.bottom>viewport.bottom-6)group.nav.scrollTop+=row.bottom-viewport.bottom+6;
+        }
+      }
+    };
+    let tocScheduled=false;
+    const scheduleToc=()=>{if(!tocScheduled){tocScheduled=true;requestAnimationFrame(()=>{setActive();tocScheduled=false;});}};
+    addEventListener('scroll',scheduleToc,{passive:true});addEventListener('resize',scheduleToc);
+    article.addEventListener('load',scheduleToc,true);document.fonts?.ready.then(scheduleToc);
+    $$('.mobile-toc').forEach(details=>details.addEventListener('toggle',()=>{if(details.open){tocGroups.filter(group=>group.track.closest('details')===details).forEach(group=>group.active=null);scheduleToc();}}));setActive();
     $$('[data-toc-link]').forEach(link => link.addEventListener('click', () => { const details = link.closest('details'); if (details) details.open = false; }));
     $('[data-copy-link]')?.addEventListener('click', async () => { const canonical = $('link[rel="canonical"]')?.href || location.href; const url = canonical + location.hash; try { await navigator.clipboard.writeText(url); toast('글 링크를 복사했어요.'); } catch { toast('주소 표시줄의 링크를 복사해 주세요.'); } });
   }
