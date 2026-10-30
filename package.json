@@ -1,0 +1,8 @@
+{
+  "name": "studybase-blog",
+  "private": true,
+  "version": "1.0.0",
+  "engines": { "node": ">=24.15.0" },
+  "scripts": { "test": "node --test tests/*.test.*" },
+  "devDependencies": { "jsdom": "30.1.3" }
+}

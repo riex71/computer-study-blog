@@ -52,8 +52,8 @@ export class GitHubPublisher {
     const index = posts.findIndex(p => p.slug === slug), remote = posts[index];
     if (draft.original) {
       if (!remote || JSON.stringify(remote) !== JSON.stringify(draft.original.post)) throw Error('다른 곳에서 이 글의 정보가 수정되었습니다. 원고를 내려받고 최신 글을 다시 불러와 주세요.');
-      const [md, source] = await Promise.all([this.file(remote.sourceMarkdown, base), this.file(remote.sourceHtml, base)]);
-      if (md.trim() !== draft.original.markdown.trim() || source.trim() !== draft.original.html.trim()) throw Error('다른 곳에서 이 글의 본문이 수정되었습니다. 원고를 내려받고 최신 글을 다시 불러와 주세요.');
+      const md = await this.file(remote.sourceMarkdown, base);
+      if (md.trim() !== draft.original.markdown.trim()) throw Error('다른 곳에서 이 글의 본문이 수정되었습니다. 원고를 내려받고 최신 글을 다시 불러와 주세요.');
     } else if (remote) throw Error('이미 같은 주소의 글이 있습니다. 다른 글 주소를 정해 주세요.');
     const post = { ...draft.post, sourceHtml: 'content/articles/' + slug + '.html', sourceMarkdown: 'content/articles/' + slug + '.md' };
     if (remote) post.updated = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });

@@ -24,7 +24,10 @@
     "thumbnailCredit": "Cheng et al. · Figure 1 · CC BY 4.0",
     "thumbnailSource": "https://arxiv.org/html/2601.07372v2#S1.F1",
     "sourceHtml": "content/articles/engram-conditional-memory.html",
-    "sourceMarkdown": "content/articles/engram-conditional-memory.md"
+    "sourceMarkdown": "content/articles/engram-conditional-memory.md",
+    "updated": "2026-10-30",
+    "socialImage": "assets/social/engram-conditional-memory.png",
+    "revisionNote": "조회 경로의 설명용 도식과 해시 충돌 실험을 보탰습니다."
   },
   {
     "slug": "mamba-selective-ssm",
@@ -51,6 +54,9 @@
     "thumbnailCredit": "Studybase · 상태 갱신 개념도",
     "thumbnailSource": "https://arxiv.org/abs/2312.00752",
     "sourceHtml": "content/articles/mamba-selective-ssm.html",
-    "sourceMarkdown": "content/articles/mamba-selective-ssm.md"
+    "sourceMarkdown": "content/articles/mamba-selective-ssm.md",
+    "updated": "2026-10-30",
+    "socialImage": "assets/social/mamba-selective-ssm.png",
+    "revisionNote": "상태 갱신 수식과 실행 가능한 예제를 중심으로 설명을 다시 구성했습니다."
   }
 ]

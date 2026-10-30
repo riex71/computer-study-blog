@@ -43,22 +43,23 @@ KaTeX 0.19.1과 폰트를 저장소에 포함해 미리보기와 공개 글에�
 
 - `content/posts.json`: 글 메타데이터
 - `content/articles/<slug>.md`: 편집할 Markdown 원고
-- `content/articles/<slug>.html`: 동일 원고의 정제된 HTML. Python 빌드는 이 파일을 사용합니다.
+- `content/articles/<slug>.html`: Markdown에서 자동 생성하는 정제된 HTML. 직접 수정하지 않습니다.
 - `posts/<slug>.html`, `index.html`, `archive.html`, `series.html`: 생성된 공개 화면
 - `templates/home.html`, `templates/article.html`, `blog.css`, `reader.css`, `blog.js`: 공통 디자인과 읽기 기능
 - `write.html`, `writer.mjs`, `writer.css`, `editor-content.js`, `draft-store.mjs`, `publisher.mjs`: 브라우저 편집기
 - `.github/workflows/pages.yml`: main 변경 시 빌드·검증 후 Pages 배포
 
-브라우저 편집기를 사용하면 Markdown과 HTML을 함께 저장합니다. 소스를 직접 고칠 때도 두 파일을 함께 갱신해야 다음 편집에서 변경을 잃지 않습니다. 생성된 `posts/*.html`을 원본으로 편집하지 않습니다.
+원고의 기준은 Markdown입니다. GitHub에서 `.md`만 수정해도 배포가 같은 편집기 렌더러로 HTML을 다시 생성합니다. 브라우저 발행 시 함께 저장하는 HTML은 생성 캐시이며 빌드의 원고 입력으로 사용하지 않습니다. 제목 뒤의 `{#기존-id}`는 외부 링크를 보존하므로 제목을 고칠 때 유지합니다. 생성된 `posts/*.html`과 `content/articles/*.html`을 원본으로 편집하지 않습니다.
 
 ```sh
+npm ci --ignore-scripts
 python3 scripts/build.py
 python3 scripts/check.py
 python3 scripts/package.py
 node --test tests/*.test.*
 ```
 
-빌드에는 Python 표준 라이브러리만 필요합니다. 게시 API 회귀 검사는 Node.js 22 이상에서 실행합니다. `package.py`는 공개 파일만 `_site/`에 모읍니다. 배포 시 `build.json`에 원본 커밋을 기록해 작성 화면에서 배포 완료를 확인합니다. 워크플로에는 Pages 쓰기·OIDC 권한과 Contents 읽기 권한만 부여합니다.
+빌드에는 Python 3와 Node.js 24.15 이상, 잠긴 npm 의존성이 필요합니다. 게시 API와 원고 변환 회귀 검사도 같은 Node 환경에서 실행합니다. `package.py`는 공개 파일만 `_site/`에 모읍니다. 배포 시 `build.json`에 원본 커밋을 기록해 작성 화면에서 배포 완료를 확인합니다. 워크플로에는 Pages 쓰기·OIDC 권한과 Contents 읽기 권한만 부여합니다.
 
 로컬에서는 저장소 루트에서 `python3 -m http.server 8000`을 실행해 http://localhost:8000/ 을 엽니다. GitHub 쓰기 테스트는 별도 브랜치에서 진행하세요.
 
@@ -84,6 +85,16 @@ Engram 원본 그림은 CC BY 4.0에 따라 출처를 표시했습니다. `asset
 
 `node tests/editorial.cjs http://localhost:8000/`는 본문 검색 문맥·강조·지연 요청의 최신 결과·검색 요청 공유·목록 복원·모바일 떠 있는 목차·관련 글·반응형 배치를 검사합니다.
 
-목차는 `##`와 `###`의 제목 단계에서 `1. / 1.1.` 형태로 만듭니다. 기존 글의 탐색 묶음은 `content/outlines.json`의 절 ID와 부모 ID로 조정할 수 있습니다. 이 파일은 본문이나 초안 내용을 수정하지 않습니다. 부모 ID가 사라진 경우에는 실제 제목 구조로 되돌아갑니다.
+목차는 Markdown의 `##`와 `###`에서 `1. / 1.1.` 형태로 만듭니다. 본문과 목차의 제목 단계가 같습니다. 기존 제목의 주소는 `## 제목 {#architecture}`처럼 유지합니다.
 
 `node tests/centered.cjs http://localhost:8000/`는 360–1920px의 본문 중앙 정렬, 오른쪽 여백, 계층 목차와 원래 앵커, Markdown 하위 제목의 ID 보존을 검사합니다.
+
+## 원고 버전과 그림 입력
+
+작성기의 더 보기 메뉴에서 현재 버전을 보관하거나 이전 원고를 복원할 수 있습니다. 내용이 바뀌면 약 3분 간격으로 자동 버전을 남기며, 게시·복원 직전과 직접 보관한 버전을 포함해 최근 20개를 원고별로 보관합니다. 복원은 현재 원고와 첨부 그림을 유지한 상태에서 이루어집니다. 버전은 이 브라우저의 IndexedDB에 있고 기기 간 동기화는 하지 않습니다. 원고 내보내기는 현재 원고와 그림을 포함합니다.
+
+PNG/JPG/WebP 파일을 선택하거나 본문에 붙여넣고 끌어다 놓을 수 있습니다. 파일 형식과 실제 디코딩을 확인하고 가로·세로 크기를 원고에 기록합니다. 그림 아래에 대체 설명과 출처를 적어주세요.
+
+빌드는 Node.js 24.15+와 Python 3를 사용합니다. `npm ci --ignore-scripts`로 잠긴 빌드 의존성을 설치합니다. `scripts/markdown.cjs`는 네트워크와 사용자 스크립트 실행 없이 저장소의 편집기·수식·정제 코드를 jsdom에서 실행합니다. 로컬에서 Node 경로를 별도로 지정하려면 `STUDYBASE_NODE`를 사용합니다.
+
+추가 브라우저 검사는 Playwright 환경에서 `node tests/upgrade.cjs http://localhost:8765/`로 실행합니다. Mamba의 학습 없는 수치 예제는 `python3 examples/state_recurrence.py`로 실행합니다.

@@ -1,7 +1,7 @@
 const { GitHubPublisher, LIVE } = await import('./publisher.mjs' + new URL(import.meta.url).search);
 const { DraftStore, draftVersion } = await import('./draft-store.mjs' + new URL(import.meta.url).search);
 const $ = s => document.querySelector(s);
-const fields = ['title','description','slug','date','category','topics','tags','thumbnail','thumbnail-alt','thumbnail-credit','thumbnail-source'];
+const fields = ['title','description','slug','date','category','topics','tags','thumbnail','thumbnail-alt','thumbnail-credit','thumbnail-source','revision-note'];
 const initialParams = new URLSearchParams(location.search);
 const requestedEdit=initialParams.get('edit'),requestedDraft=initialParams.get('draft'),requestedNew=initialParams.get('new')==='1';
 let returnToReview=false;
@@ -49,6 +49,7 @@ function collect() {
   for (const key of ['title','description','slug','date','category','thumbnail']) p[key] = $('#post-' + key).value.trim();
   if(p.title!==oldTitle||!p.shortTitle)p.shortTitle=p.title;
   if(p.description!==oldDescription||!p.deck)p.deck=p.description;
+  p.revisionNote=$('#post-revision-note').value.trim();
   p.topics = split($('#post-topics').value); p.tags = split($('#post-tags').value);
   for (const [key, id] of [['thumbnailAlt','thumbnail-alt'],['thumbnailCredit','thumbnail-credit'],['thumbnailSource','thumbnail-source']]) p[key] = $('#post-' + id).value.trim();
   draft.markdown = $('#markdown-editor').value;
@@ -61,7 +62,13 @@ function renderPreview() {
   $('#preview-title').textContent = draft.post.title || '제목 미리보기';
   $('#preview-description').textContent = draft.post.description;
   $('#preview-body').innerHTML = EditorContent.preview(EditorContent.compile(draft.markdown, draft.original?.html), draft.images);
+  $('#preview-body').querySelectorAll('table').forEach(table=>{
+    if(table.parentElement.matches('.engram-table-wrap,.table-scroll'))return;
+    const wrapper=document.createElement('div');wrapper.className='table-scroll';wrapper.tabIndex=0;wrapper.setAttribute('role','region');wrapper.setAttribute('aria-label',(table.querySelector('caption')?.textContent.trim()||'본문 표')+', 가로 스크롤 가능');table.before(wrapper);wrapper.append(table);
+  });
+  $('.preview-pane').classList.toggle('engram-article-page',draft.post.slug.startsWith('engram'));
   const math = StudyMath.render($('#preview-body'));
+  window.StudyLabs?.mount($('#preview-body'));
   $('#math-status').textContent = math.errors ? `${math.errors}개 수식의 문법을 확인해 주세요. 입력한 식은 그대로 보관됩니다.` : '';
   previewPane.scrollTop=scroll;
   $('#word-count').textContent = draft.markdown.replace(/\s/g, '').length.toLocaleString() + '자';
@@ -74,7 +81,7 @@ async function refreshDrafts(){
   for(const item of list)if(item.id!==draft?.id&&!unsaved.has(item.id))versions.set(item.id,draftVersion(item));
   renderDrafts();
 }
-async function save(){
+async function save(checkpoint=''){
   if(!draft)return;
   collect();
   if(!draft.original&&!draft.post.title&&!draft.post.description&&!draft.post.slug&&!draft.markdown&&!draft.images.length)return;
@@ -82,7 +89,7 @@ async function save(){
   const task=saveQueue.catch(()=>{}).then(async()=>{
     const sourceId=snapshot.id;while(aliases.has(snapshot.id))snapshot.id=aliases.get(snapshot.id);
     try{
-      const result=await draftStore.save(snapshot,versions.get(snapshot.id)||null),record=result.record;
+      const result=await draftStore.save(snapshot,versions.get(snapshot.id)||null,{checkpoint}),record=result.record;
       if(result.conflict){
         aliases.set(snapshot.id,record.id);
         if(result.previous)remember(result.previous);
@@ -108,6 +115,7 @@ function fill(next) {
   draft.markdown = EditorContent.normalizeLegacy(draft.markdown, draft.original?.html);
   if (location.protocol !== 'file:') history.replaceState(null, '', location.pathname + '?draft=' + encodeURIComponent(draft.id));
   for (const key of ['title','description','slug','date','category','thumbnail']) $('#post-' + key).value = p[key] || '';
+  $('#post-revision-note').value=p.revisionNote||'';
   $('#post-topics').value = p.topics.join(', '); $('#post-tags').value = p.tags.join(', ');
   for (const [key, id] of [['thumbnailAlt','thumbnail-alt'],['thumbnailCredit','thumbnail-credit'],['thumbnailSource','thumbnail-source']]) $('#post-' + id).value = p[key] || '';
   $('#post-slug').disabled = !!draft.original || !!draft.images.length;
@@ -172,7 +180,7 @@ async function loadPost(slug, force = false) {
     if (publisher) {
       const sha = await publisher.head(); posts = JSON.parse(await publisher.file('content/posts.json', sha)); populatePosts(); post = posts.find(p => p.slug === slug);
       if (!post) throw Error('공개 글을 찾을 수 없습니다.');
-      [markdown, html] = await Promise.all([publisher.file(post.sourceMarkdown, sha), publisher.file(post.sourceHtml, sha)]);
+      markdown = await publisher.file(post.sourceMarkdown, sha);html=EditorContent.compile(markdown);
     } else {
       post = posts.find(p => p.slug === slug); if (!post) throw Error('공개 글을 찾을 수 없습니다.');
       [markdown, html] = await Promise.all([publicFile(post.sourceMarkdown), publicFile(post.sourceHtml)]);
@@ -220,29 +228,73 @@ document.querySelectorAll('[data-insert]').forEach(button => button.addEventList
   editor.setRangeText(snippets[button.dataset.insert],start,end,'end');editor.focus();collect();renderPreview();save();
 }));
 $('#open-markdown-help').addEventListener('click',()=>{document.querySelector('.more-tools').open=false;openDialog('help-dialog')});
-$('#image-upload').addEventListener('change', async event => {
-  const file=event.target.files[0];event.target.value='';if(!file||busy)return;ensureSlug(true);collect();
+async function attachImages(files){
+  if(!files.length||busy)return;ensureSlug(true);collect();
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(draft.post.slug)) { message('그림을 넣기 전에 ‘글 정보’에서 글 주소를 정해 주세요.'); openDialog('settings-dialog');$('#post-slug').focus(); return; }
-  if (!['image/png','image/jpeg','image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) { message('PNG, JPG, WebP 그림을 5MB 이하로 첨부해 주세요.'); return; }
-  if (draft.images.reduce((n,i) => n + i.base64.length, 0) > 24 * 1024 * 1024) { message('이 원고의 그림 용량이 큽니다. 먼저 게시한 뒤 이어서 첨부해 주세요.'); return; }
+  if (files.some(file=>!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>5*1024*1024)) { message('PNG, JPG, WebP 그림을 5MB 이하로 첨부해 주세요.'); return; }
+  if (draft.images.reduce((n,i) => n + i.base64.length, 0)+files.reduce((n,f)=>n+Math.ceil(f.size/3)*4,0) > 32 * 1024 * 1024) { message('이 원고의 그림 용량이 큽니다. 먼저 게시한 뒤 이어서 첨부해 주세요.'); return; }
   busy=true;const unlock=lockEditor();message('그림을 읽는 중입니다…');
   try {
     await save();
+    const staged=[];
+    for(const file of files){
     const bytes = new Uint8Array(await file.arrayBuffer());
     const png = bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71;
     const jpg = bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
     const webp = String.fromCharCode(...bytes.slice(0,4)) === 'RIFF' && String.fromCharCode(...bytes.slice(8,12)) === 'WEBP';
     if (!(file.type === 'image/png' && png || file.type === 'image/jpeg' && jpg || file.type === 'image/webp' && webp)) throw Error('이미지 파일 형식을 확인해 주세요.');
-    const bitmap = await createImageBitmap(file); bitmap.close();
+    const bitmap = await createImageBitmap(file),width=bitmap.width,height=bitmap.height; bitmap.close();
     let binary = ''; for (let i=0;i<bytes.length;i+=8192) binary += String.fromCharCode(...bytes.subarray(i,i+8192));
     const ext = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1];
     const path = 'assets/uploads/' + draft.post.slug + '/' + Date.now() + '-' + crypto.randomUUID().slice(0,8) + '.' + ext;
-    draft.images.push({path,type:file.type,base64:btoa(binary)});
-    const editor = $('#markdown-editor'), insert = '\n\n![그림 설명을 적어주세요](../' + path + ')\n\n그림 설명: 설명과 출처를 적어주세요.\n';
+    staged.push({path,type:file.type,base64:btoa(binary),width,height});
+    }
+    draft.images.push(...staged);
+    const editor = $('#markdown-editor'), insert = staged.map(image=>'\n\n<img src="../'+image.path+'" width="'+image.width+'" height="'+image.height+'" alt="그림 설명을 적어주세요">\n\n그림 설명: 설명과 출처를 적어주세요.\n').join('');
     editor.setRangeText(insert, editor.selectionStart, editor.selectionEnd, 'end');
     $('#post-slug').disabled = true; collect(); renderPreview(); await save(); message('그림을 첨부했습니다. 설명과 출처를 적어주세요.');
   } catch (error) { message(error.message || '그림을 불러오지 못했습니다.'); }
   finally{busy=false;unlock();$('#post-slug').disabled=!!draft.original||!!draft.images.length;renderDrafts();}
+}
+$('#image-upload').addEventListener('change',event=>{const files=[...event.target.files];event.target.value='';attachImages(files);});
+const markdownEditor=$('#markdown-editor');
+markdownEditor.addEventListener('paste',event=>{
+  const files=[...(event.clipboardData?.files||[])].filter(file=>file.type.startsWith('image/'));
+  if(files.length){event.preventDefault();attachImages(files);}
+});
+markdownEditor.addEventListener('dragover',event=>{if([...(event.dataTransfer?.types||[])].includes('Files')){event.preventDefault();event.dataTransfer.dropEffect='copy';markdownEditor.classList.add('is-drop-target');}});
+markdownEditor.addEventListener('dragleave',()=>markdownEditor.classList.remove('is-drop-target'));
+markdownEditor.addEventListener('drop',event=>{
+  markdownEditor.classList.remove('is-drop-target');const files=[...(event.dataTransfer?.files||[])];
+  if(files.length){event.preventDefault();attachImages(files);}
+});
+let historyEntries=[],historySelection;
+function selectHistory(entry){
+  historySelection=entry;$('#history-source').value=entry.draft.markdown;$('#history-selected-title').textContent=entry.draft.post.title||'제목 없는 글';
+  const before=entry.draft.markdown.split('\n').length,now=draft.markdown.split('\n').length;
+  $('#history-comparison').textContent=`선택한 원고 ${before}줄 · 현재 원고 ${now}줄`;
+  $('#restore-version').disabled=false;
+  for(const button of $('#history-list').children)button.setAttribute('aria-pressed',String(button.dataset.key===entry.key));
+}
+$('#checkpoint-draft').addEventListener('click',async()=>{if(busy)return;document.querySelector('.more-tools').open=false;await save('직접 보관');if(!storageFailed)message('현재 원고를 버전으로 보관했습니다.');});
+$('#open-history').addEventListener('click',async()=>{
+  if(busy)return;document.querySelector('.more-tools').open=false;
+  try{
+    await save();historyEntries=await draftStore.history(draft.id);historySelection=undefined;$('#history-list').replaceChildren();$('#history-source').value='';$('#history-selected-title').textContent='이전 원고';$('#history-comparison').textContent='';$('#restore-version').disabled=true;
+    for(const entry of historyEntries){const button=document.createElement('button');button.type='button';button.dataset.key=entry.key;button.textContent=new Date(entry.recordedAt).toLocaleString('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · '+entry.label;button.setAttribute('aria-pressed','false');button.addEventListener('click',()=>selectHistory(entry));$('#history-list').append(button);}
+    $('#history-empty').hidden=historyEntries.length>0;openDialog('history-dialog');if(historyEntries.length)selectHistory(historyEntries[0]);
+  }catch(error){message(error.message);}
+});
+$('#restore-version').addEventListener('click',async()=>{
+  if(busy||!historySelection)return;busy=true;const unlock=lockEditor();$('#restore-version').disabled=true;
+  try{
+    await save('복원 직전');if(storageFailed)throw Error('현재 원고를 저장하지 못해 복원을 멈췄습니다. 원고를 내려받아 보관해 주세요.');
+    const selected=historySelection,latest=structuredClone(draft);
+    if(selected.imagePaths.some(path=>!latest.images.some(image=>image.path===path)))throw Error('이 버전의 첨부 그림을 찾지 못했습니다. 현재 원고를 유지합니다.');
+    const next={...structuredClone(selected.draft),id:latest.id,revision:latest.revision,savedAt:latest.savedAt,images:latest.images,original:latest.original,deployment:latest.deployment,post:{...selected.draft.post,slug:latest.post.slug}};
+    fill(next);await save('복원한 원고');closeDialog('history-dialog');message('선택한 원고를 복원했습니다. 복원 직전 내용도 버전에 남아 있습니다.');
+  }catch(error){message(error.message);}
+  finally{busy=false;unlock();$('#restore-version').disabled=false;renderDrafts();}
 });
 function download() {
   collect(); const blob = new Blob([JSON.stringify({format:'studybase-draft-v1',draft},null,2)],{type:'application/json'}), url = URL.createObjectURL(blob), a = document.createElement('a');
@@ -325,10 +377,12 @@ $('#publish-button').addEventListener('click', async () => {
   const controls = [...document.querySelectorAll('.writing-desk input,.writing-desk textarea,.writing-desk button,.writer-sidebar button,.writer-sidebar select,.writer-sidebar input')];
   const previous = controls.map(c => c.disabled); controls.forEach(c => c.disabled = true);
   try {
-    await save(); const submitted = structuredClone(draft);
+    await save('게시 직전'); const submitted = structuredClone(draft);
+    submitted.markdown=EditorContent.toMarkdown(html);
+    html=EditorContent.compile(submitted.markdown);
     const result = await publisher.publish(submitted, html, text => $('#publish-status').textContent = text);
     accepted=true;
-    draft.post = result.post; draft.original = {post:structuredClone(result.post),markdown:result.markdown,html:result.html};draft.deployment={sha:result.sha,url:result.url,status:'building'};updateContext();
+    draft.post = result.post;draft.markdown=result.markdown;$('#markdown-editor').value=result.markdown; draft.original = {post:structuredClone(result.post),markdown:result.markdown,html:result.html};draft.deployment={sha:result.sha,url:result.url,status:'building'};updateContext();renderPreview();
     await save(); $('#publish-status').textContent = '원고를 GitHub에 저장했습니다. 블로그를 배포하는 중입니다…';
     $('#publish-button').hidden = true; $('#deployment-link').href = 'https://github.com/riex71/computer-study-blog/actions'; $('#deployment-link').hidden = false;
     posts = posts.filter(p => p.slug !== result.post.slug); posts.unshift(result.post); populatePosts();renderDeployment();deploymentEpoch++;watchDeployment({...result,draftId:draft.id},0,deploymentEpoch);
