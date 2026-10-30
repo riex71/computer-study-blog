@@ -165,7 +165,7 @@
     let scheduled = false;
     const progress = () => {floatToc(); const start = article.getBoundingClientRect().top + scrollY - 100; const length = Math.max(1, article.offsetHeight - innerHeight + 150); const value = Math.max(0, Math.min(1, (scrollY - start) / length)); if (bar) bar.style.transform = `scaleX(${value})`;tocProgress.forEach(fill=>fill.style.transform=`scaleX(${value})`); if (label) label.textContent = `${Math.round(value * 100)}%`; scheduled = false; };
     addEventListener('scroll', () => { if (!scheduled) { scheduled = true; requestAnimationFrame(progress); } }, { passive: true }); addEventListener('resize', progress); progress();
-    const headings = [...article.querySelectorAll('h2[id],h3[id]')];
+    const headings = [...article.querySelectorAll('h2[id],h3[id],h4[id],h5[id],h6[id]')].filter(h=>h.textContent.trim());
     const tocGroups=$$('.toc-track').map(track=>({track,nav:track.closest('nav'),links:[...track.querySelectorAll('[data-toc-link]')],active:null}));
     const setActive=()=>{
       if(!headings.length)return;
