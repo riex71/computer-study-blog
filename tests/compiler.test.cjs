@@ -31,7 +31,15 @@ test('interactive article placeholders survive Markdown publishing without copyi
   const html=compiler.compile('<div class="engram-hash-demo"></div>'),md=compiler.window.EditorContent.toMarkdown(html);
   assert.equal(root(compiler.compile(md)).querySelectorAll('.engram-hash-demo').length,1);
   const rendered='<div class="engram-hash-demo"><p>temporary status</p><button>control</button></div>';
-  assert.equal(compiler.window.EditorContent.toMarkdown(rendered).trim(),'<div class="engram-hash-demo"></div>');
+  assert.equal(compiler.window.EditorContent.toMarkdown(rendered).trim(),':::engram-hash-demo\n:::');
+});
+test('hash demo directive is preserved as a component and stays literal inside code fences',()=>{
+  const source=':::engram-hash-demo\n:::\n',html=compiler.compile(source);
+  assert.equal(root(html).querySelectorAll('.engram-hash-demo').length,1);
+  assert.equal(compiler.window.EditorContent.toMarkdown(html).trim(),source.trim());
+  const literal=root(compiler.compile('```markdown\n'+source+'```\n'));assert.equal(literal.querySelectorAll('.engram-hash-demo').length,0);assert.match(literal.querySelector('code').textContent,/:::engram-hash-demo/);
+  const legacy=root(compiler.compile('<div class="engram-hash-demo"><p>runtime controls 481632</p><table><tr><td>runtime data</td></tr></table></div>'));
+  assert.equal(legacy.querySelectorAll('table').length,0);assert.ok(!legacy.textContent.includes('runtime'));
 });
 test('build compiler never executes source scripts or keeps event handlers',()=>{
   const html=compiler.compile('<script>globalThis.pwned=true</script>\n\n<img src="https://example.com/x.png" onerror="alert(1)">\n\n[bad](javascript:alert(1))');

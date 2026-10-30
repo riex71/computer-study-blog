@@ -17,6 +17,7 @@
   function mount(root=document){
     root.querySelectorAll('.engram-hash-demo:not([data-ready])').forEach(host=>{
       host.dataset.ready='true';
+      host.replaceChildren();
       const el=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
       host.append(el('p','같은 주소로 가는 토큰 묶음 살펴보기'));
       const controls=el('div');controls.className='lab-controls';

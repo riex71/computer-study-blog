@@ -28,6 +28,28 @@ textarea{font:inherit;color:inherit;resize:vertical}button,input,textarea,select
 .preview-pane .public-article h3{font-size:20px;line-height:1.65}
 .preview-pane .public-article figure{margin:32px 0}
 .revision-field{margin-top:20px}
+.editor-view-label{display:flex;align-items:center;gap:16px;font-size:12px;color:var(--muted)}
+#toggle-mobile-preview{display:none;border:0;background:none;color:var(--accent);padding:7px 0;font-size:12px}
+@media(max-width:899px){#toggle-mobile-preview{display:block}.editor-view-label>span{display:none}}
+@media(min-width:900px){
+ body[data-page=writer]{height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+ .writer-header{flex-shrink:0}
+ .writer-boot-lock{flex:1;min-height:0}
+ .writer-layout{height:100%}
+ .writing-desk{display:flex;flex-direction:column;height:100%;min-height:0}
+ .writing-desk>:not(.editor-panes){flex-shrink:0}
+ .editor-toolbar{position:static}
+ .editor-panes[data-mode=split]{flex:1;height:auto;min-height:0}
+}
+.source-editor{position:relative;min-width:0;min-height:0;height:calc(100dvh - 255px)}
+.editor-panes .markdown-pane .source-editor textarea{position:absolute;inset:0;height:100%;min-height:0;width:100%;margin:0;padding:0 10px 18px 0;resize:none;background:transparent;color:transparent;caret-color:var(--ink)}
+.source-highlight{position:absolute;inset:0;margin:0;border:0;overflow:hidden;white-space:pre-wrap;overflow-wrap:break-word;pointer-events:none;box-sizing:border-box;color:var(--ink);background:none}
+.source-highlight code,.source-highlight .token{font:inherit;font-weight:400;font-style:normal;white-space:inherit}
+.source-highlight .token.title,.source-highlight .token.url{color:var(--accent)}
+.source-editor textarea::selection{background:#7ca88c42;color:transparent}
+@media(min-width:900px){.source-editor{flex:1;height:auto;min-height:0}}
+@media(max-width:899px){.source-editor{min-height:360px}}
+@media(forced-colors:active){.source-highlight{display:none}.editor-panes .markdown-pane .source-editor textarea{color:CanvasText}.source-editor textarea::selection{color:HighlightText;background:Highlight}}
 @media(min-width:900px){
  .editor-panes[data-mode=split] .preview-pane .public-article p,.editor-panes[data-mode=split] .preview-pane .public-article li{font-size:17px}
  .editor-panes[data-mode=split] .preview-pane h1{font-size:35px}

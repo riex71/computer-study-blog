@@ -1,13 +1,14 @@
 /* Keep editable Markdown separate from safe canonical HTML and rendered math. */
 (() => {
-  marked.use({extensions:StudyMath.extensions,tokenizer:{del(source){return source.startsWith('~~')?false:undefined;}},renderer:{heading({tokens,depth}){
+  const hashDemo={name:'engramHashDemo',level:'block',start:source=>{const index=source.indexOf(':::engram-hash-demo');return index<0?undefined:index;},tokenizer(source){const match=/^ {0,3}:::engram-hash-demo[^\S\n]*\n {0,3}:::[^\S\n]*(?:\n|$)/.exec(source);if(match)return {type:'engramHashDemo',raw:match[0]};},renderer:()=>'<div class="engram-hash-demo"></div>\n'};
+  marked.use({extensions:[...StudyMath.extensions,hashDemo],tokenizer:{del(source){return source.startsWith('~~')?false:undefined;}},renderer:{heading({tokens,depth}){
     let title=this.parser.parseInline(tokens);const match=/\s*\{#([\w가-힣-]+)\}$/.exec(title),id=match?match[1]:'';
     if(match)title=title.slice(0,match.index);
     return '<h'+depth+(id?' id="'+id+'"':'')+'>'+title+'</h'+depth+'>\n';
   }}});
   const tags=['p','br','h2','h3','h4','ul','ol','li','a','img','figure','figcaption','table','thead','tbody','tfoot','tr','th','td','caption','pre','code','blockquote','hr','em','s','del','sub','sup','span','div','section','dl','dt','dd','details','summary'];
   const policy={ALLOWED_TAGS:tags,ALLOWED_ATTR:['href','src','alt','title','id','class','colspan','rowspan','scope','width','height','start','open','aria-labelledby'],ALLOW_DATA_ATTR:false,ALLOW_ARIA_ATTR:false,FORBID_ATTR:['style'],ALLOW_UNKNOWN_PROTOCOLS:false};
-  const classes=/^(?:note-figure|paper-figure|figure-note|article-sources|source-list|formula|equation|table-wrap|table-caption|note|callout|language-[a-z0-9-]+|source-note|figure-grid|reference-list|engram-editor-note|engram-equation|engram-image-link|engram-paper-figure|engram-table|engram-table-wrap|engram-hash-demo|math-inline|math-display)$/;
+  const classes=/^(?:note-figure|paper-figure|figure-note|article-sources|source-list|formula|equation|table-wrap|table-caption|note|callout|language-[a-z0-9+.#-]+|source-note|figure-grid|reference-list|engram-editor-note|engram-equation|engram-image-link|engram-paper-figure|engram-table|engram-table-wrap|engram-hash-demo|math-inline|math-display)$/;
   const textKey=node=>node.textContent.replace(/\s+/g,' ').trim();
   function documentOf(html){const root=document.createElement('div');root.innerHTML=DOMPurify.sanitize(html,policy);return root;}
   function compile(markdown,referenceHTML='') {
@@ -23,6 +24,7 @@
       img.setAttribute('loading','lazy');img.setAttribute('decoding','async');
     });
     root.querySelectorAll('[class]').forEach(el=>{const allowed=el.className.split(/\s+/).filter(c=>classes.test(c));if(allowed.length)el.className=allowed.join(' ');else el.removeAttribute('class');});
+    root.querySelectorAll('.engram-hash-demo').forEach(node=>{node.replaceChildren();const fallback=document.createElement('p');fallback.textContent='해시 충돌 실험은 JavaScript를 켜면 사용할 수 있습니다.';node.append(fallback);});
     const priorImages=new Map([...reference.querySelectorAll('figure img')].map(img=>[img.getAttribute('src'),img]));
     for(const node of [...root.children])if(node.tagName==='IMG'||node.tagName==='A'&&node.querySelectorAll('img').length===1&&!node.textContent.trim()){
       const paragraph=document.createElement('p');node.before(paragraph);paragraph.append(node);
@@ -72,7 +74,7 @@
     source.querySelectorAll('.engram-hash-demo').forEach(node=>node.textContent='\u200b');
     source.querySelectorAll('.math-inline,.math-display').forEach(node=>node.setAttribute('data-study-tex',node.textContent));
     const td=new TurndownService({headingStyle:'atx',codeBlockStyle:'fenced',bulletListMarker:'-',emDelimiter:'_',blankReplacement:(_content,node)=>node.nodeName==='SPAN'&&node.id?node.outerHTML:node.isBlock?'\n\n':''});
-    td.addRule('article-labs',{filter:node=>node.classList?.contains('engram-hash-demo'),replacement:()=> '\n\n<div class="engram-hash-demo"></div>\n\n'});
+    td.addRule('article-labs',{filter:node=>node.classList?.contains('engram-hash-demo'),replacement:()=> '\n\n:::engram-hash-demo\n:::\n\n'});
     td.addRule('anchor-spans',{filter:node=>node.nodeName==='SPAN'&&!!node.id,replacement:(_content,node)=>node.hasAttribute('data-study-anchor')?'<span id="'+node.id+'"></span>':node.outerHTML});
     td.addRule('anchored-headings',{filter:['h2','h3'],replacement:(content,node)=>'\n\n'+'#'.repeat(Number(node.tagName.slice(1)))+' '+content.trim()+(node.id?' {#'+node.id+'}':'')+'\n\n'});
     td.addRule('math',{filter:node=>node.classList?.contains('math-inline')||node.classList?.contains('math-display'),replacement:(_content,node)=>{const tex=node.getAttribute('data-study-tex')??node.textContent;return node.classList.contains('math-display')?'\n\n$$\n'+tex.trim()+'\n$$\n\n':'$'+tex+'$';}});

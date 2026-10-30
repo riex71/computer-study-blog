@@ -24,7 +24,7 @@ BASE = 'https://riex71.github.io/computer-study-blog'
 AUTHOR = '윤동현'
 OUTLINES={}
 POSTS = sorted(json.loads((ROOT / 'content/posts.json').read_text(encoding='utf-8')), key=lambda p: p['date'], reverse=True)
-VERSION = hashlib.sha256(b''.join((ROOT / p).read_bytes() for p in ['blog.css', 'reader.css', 'blog.js', 'article-math.js', 'article-labs.js', 'assets/vendor/katex/katex.min.js', 'assets/vendor/katex/katex.min.css'])).hexdigest()[:12]
+VERSION = hashlib.sha256(b''.join((ROOT / p).read_bytes() for p in ['blog.css', 'reader.css', 'blog.js', 'article-math.js', 'article-labs.js', 'article-code.js', 'assets/vendor/prism.js', 'assets/vendor/katex/katex.min.js', 'assets/vendor/katex/katex.min.css'])).hexdigest()[:12]
 BOOKMARK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4z"/></svg>'
 class Plain(HTMLParser):
     def __init__(self):
@@ -51,7 +51,7 @@ def header(prefix=''):
     return f'''<header class="site-header"><div class="header-inner"><a class="site-brand" href="{prefix}index.html">Studybase</a><nav class="site-nav" aria-label="주 메뉴"><a href="{prefix}archive.html">글</a><a href="{prefix}index.html#about">소개</a></nav><button class="search-toggle" data-open-search type="button" aria-label="글 검색 (Ctrl 또는 Command K)">검색</button><button class="theme-toggle" data-theme-toggle type="button" aria-label="어두운 화면으로 변경" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg></button></div></header>'''
 
 def footer(prefix=''):
-    return f'''<footer class="site-footer"><div class="footer-inner"><span>© 2026 윤동현</span><nav class="footer-links" aria-label="하단 메뉴"><a href="{prefix}feed.xml">RSS</a><a href="https://github.com/riex71/computer-study-blog">GitHub</a><a href="{prefix}write.html?new=1">글쓰기</a></nav></div></footer>'''
+    return f'''<footer class="site-footer"><div class="footer-inner"><span>© 2026 Studybase</span><nav class="footer-links" aria-label="하단 메뉴"><a href="{prefix}feed.xml">RSS</a><a href="https://github.com/riex71/computer-study-blog">GitHub</a><a href="{prefix}write.html?new=1">글쓰기</a></nav></div></footer>'''
 
 def dialogs():
     return '''<dialog class="search-dialog" data-search-dialog aria-labelledby="global-search-title"><div class="dialog-top"><label id="global-search-title" for="global-search">어떤 개념을 찾고 있나요?</label><button data-close-search type="button" aria-label="검색 닫기">닫기 · Esc</button></div><input id="global-search" type="search" data-global-search placeholder="제목, 태그, 본문 검색" autocomplete="off" maxlength="200" aria-describedby="global-search-status"><p class="search-status" data-global-status id="global-search-status" role="status" aria-live="polite"></p><div class="global-results" data-global-results></div><p class="dialog-hint">↑ ↓ 결과 이동 · Enter 열기</p></dialog><div class="blog-toast" data-toast role="status" aria-live="polite"></div>'''
@@ -95,7 +95,7 @@ topics = list(dict.fromkeys(t for p in POSTS for t in p['topics']))
 topic_links = ''.join(f'<a href="archive.html?topic={attr(t)}">{escape(t)} <span>{sum(t in p["topics"] for p in POSTS):02}</span></a>' for t in topics)
 filters = '<button type="button" data-topic="" aria-pressed="true">전체</button>' + ''.join(f'<button type="button" data-topic="{attr(t)}" aria-pressed="false">{escape(t)}</button>' for t in topics)
 home = (ROOT / 'templates/home.html').read_text(encoding='utf-8')
-for key, value in {'HEAD': head('원리를 연결하는 AI 공부 기록', '윤동현의 AI 공부 블로그. 논문의 구조와 수식, 실험 조건을 그림과 함께 차근차근 읽습니다.'), 'COUNT': str(len(POSTS)), 'HEADER': header(), 'FOOTER': footer(), 'DIALOGS': dialogs(), 'TOPIC_LINKS': topic_links, 'CARDS': '\n'.join(card(p, quiet=True) for p in POSTS[:6])}.items(): home = home.replace('{{'+key+'}}', value)
+for key, value in {'HEAD': head('원리를 연결하는 AI 공부 기록', 'AI 공부 블로그. 논문의 구조와 수식, 실험 조건을 그림과 함께 차근차근 읽습니다.'), 'COUNT': str(len(POSTS)), 'HEADER': header(), 'FOOTER': footer(), 'DIALOGS': dialogs(), 'TOPIC_LINKS': topic_links, 'CARDS': '\n'.join(card(p, quiet=True) for p in POSTS[:6])}.items(): home = home.replace('{{'+key+'}}', value)
 schema = {'@context':'https://schema.org','@type':'Blog','name':'Studybase','url':BASE+'/','inLanguage':'ko-KR','author':{'@type':'Person','name':AUTHOR},'blogPost':[{'@type':'BlogPosting','headline':p['title'],'url':BASE+'/posts/'+p['slug']+'.html','datePublished':p['date']} for p in POSTS]}
 home = home.replace('</head>', '<script type="application/ld+json">'+js(schema)+'</script></head>')
 assert '{{' not in home
@@ -143,7 +143,7 @@ for post in POSTS:
     article_head = head(post['title'], post['description'], 'posts/'+post['slug']+'.html', image=post.get('socialImage','assets/social-cover.png'))
     article_head = article_head.replace('href="feed.xml"','href="../feed.xml"').replace('href="assets/', 'href="../assets/').replace('href="blog.css', 'href="../blog.css').replace('src="blog.js', 'src="../blog.js').replace('content="website"', 'content="article"')
     article_head += f'<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css?v={VERSION}"><script src="../assets/vendor/katex/katex.min.js?v={VERSION}" defer></script><script src="../article-math.js?v={VERSION}" defer></script>'
-    article_head += f'<script src="../article-labs.js?v={VERSION}" defer></script>'
+    article_head += f'<script src="../article-labs.js?v={VERSION}" defer></script><script src="../assets/vendor/prism.js?v={VERSION}" defer></script><script src="../article-code.js?v={VERSION}" defer></script>'
     revision = ''
     if post.get('updated'):
         revision = f'<p class="article-revision">수정 <time datetime="{attr(post["updated"])}">{escape(post["updated"].replace("-","."))}</time>' + (' · '+escape(post['revisionNote']) if post.get('revisionNote') else '') + '</p>'
@@ -170,6 +170,6 @@ ET.indent(urlset);ET.ElementTree(urlset).write(ROOT/'sitemap.xml',encoding='utf-
 if os.environ.get('GITHUB_SHA'):
     (ROOT/'build.json').write_text(json.dumps({'commit':os.environ['GITHUB_SHA'],'builtAt':datetime.now(timezone.utc).isoformat()}),encoding='utf-8')
 editor_template = (ROOT/'templates/write.html').read_text(encoding='utf-8')
-editor_version = hashlib.sha256((editor_template + ''.join((ROOT/p).read_text(encoding='utf-8') for p in ['writer.mjs','writer.css','editor-content.js','article-math.js','publisher.mjs','draft-store.mjs','article-labs.js','reader.css','posts/engram.css','assets/vendor/THIRD_PARTY.md'])).encode()).hexdigest()[:12]
+editor_version = hashlib.sha256((editor_template + ''.join((ROOT/p).read_text(encoding='utf-8') for p in ['writer.mjs','writer.css','editor-content.js','article-math.js','publisher.mjs','draft-store.mjs','article-labs.js','article-code.js','editor-scroll.js','editor-source.js','assets/vendor/prism.js','reader.css','posts/engram.css','assets/vendor/THIRD_PARTY.md'])).encode()).hexdigest()[:12]
 (ROOT/'write.html').write_text(editor_template.replace('{{EDITOR_VERSION}}', editor_version),encoding='utf-8')
 print(f'Built {len(POSTS)} posts, home, archive, series, search, RSS and sitemap. Version {VERSION}')
