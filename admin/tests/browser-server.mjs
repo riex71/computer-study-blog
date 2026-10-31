@@ -30,7 +30,7 @@ const fetchImpl=async(url,init={})=>{
 };
 const handler=createHandler({fetchImpl});
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript','.mjs':'text/javascript','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.woff2':'font/woff2'};
-env.ASSETS={fetch:async request=>{const name=path.resolve(dist,'.'+new URL(request.url).pathname);if(!name.startsWith(dist+path.sep))return new Response('Not found',{status:404});try{return new Response(request.method==='HEAD'?null:await fs.readFile(name),{headers:{'Content-Type':mime[path.extname(name)]||'application/octet-stream'}});}catch{return new Response('Not found',{status:404});}}};
+env.ASSETS={fetch:async request=>{const name=path.resolve(dist,'.'+new URL(request.url).pathname);if(!name.startsWith(dist+path.sep))return new Response('Not found',{status:404});try{let data=await fs.readFile(name);if(path.basename(name)==='writer.mjs')data=Buffer.from(data.toString('utf8').replace('publicURL:LIVE',"publicURL:'http://127.0.0.1:8769/'"));return new Response(request.method==='HEAD'?null:data,{headers:{'Content-Type':mime[path.extname(name)]||'application/octet-stream'}});}catch{return new Response('Not found',{status:404});}}};
 http.createServer(async(req,res)=>{try{
  const url=new URL(req.url,'http://127.0.0.1:8767');
  if(url.pathname==='/__test/reset'&&req.method==='POST'){head='a'.repeat(40);counter=0;blobs.clear();files.clear();pending.length=0;commits.length=0;env.SESSIONS.records.clear();fixtureCookie=(await login(env,fetchImpl)).cookie;res.writeHead(200).end('reset');return;}
@@ -44,3 +44,5 @@ http.createServer(async(req,res)=>{try{
  if(response.headers.getSetCookie().length)res.setHeader('Set-Cookie',response.headers.getSetCookie());
  res.writeHead(response.status);res.end(Buffer.from(await response.arrayBuffer()));
 }catch{res.writeHead(500).end('Test adapter failed');}}).listen(8767,'127.0.0.1',()=>console.log('Private GitHub login test server: http://127.0.0.1:8767/write.html'));
+
+http.createServer(async(req,res)=>{const rel=new URL(req.url,'http://127.0.0.1:8769').pathname,name=path.resolve(root,'.'+rel);if(!name.startsWith(root+path.sep)){res.writeHead(403).end();return;}try{let data=await fs.readFile(name);if(path.basename(name)==='draft-migration.html')data=Buffer.from(data.toString('utf8').replace('data-admin-origin="https://studybase-admin.dmcydh1804.workers.dev"','data-admin-origin="http://127.0.0.1:8767"'));res.writeHead(200,{'Content-Type':mime[path.extname(name)]||'application/octet-stream','Cache-Control':'no-store'}).end(data);}catch{res.writeHead(404).end();}}).listen(8769,'127.0.0.1',()=>console.log('Isolated old-origin draft store: http://127.0.0.1:8769/'));

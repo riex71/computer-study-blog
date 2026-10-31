@@ -11,8 +11,8 @@
     "run_worker_first": true
   },
   "vars": {
-    "GITHUB_CLIENT_ID": "",
-    "GITHUB_APP_ID": "",
+    "GITHUB_CLIENT_ID": "Iv23lib4szKtOaisN68j",
+    "GITHUB_APP_ID": "5550978",
     "ADMIN_ORIGIN": "https://studybase-admin.dmcydh1804.workers.dev"
   },
   "kv_namespaces": [
