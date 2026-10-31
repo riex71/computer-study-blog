@@ -12,6 +12,7 @@ try{
  await p.goto(base+'write.html?edit=engram-conditional-memory');await p.waitForFunction(()=>document.querySelector('#writer-boot-lock')?.disabled===false);await p.waitForFunction(()=>document.querySelector('#markdown-editor').value.length>100);
  ok('Authenticated editor automatically uses the server session',await p.locator('#connection-state').textContent().then(s=>s.includes('riex71'))&&!await p.locator('#connect-form').isVisible());
  ok('Existing public Markdown opens without asking for a browser GitHub token',await p.locator('#post-title').inputValue().then(s=>s.includes('Engram'))&&await p.locator('#github-token').inputValue()==='');
+ ok('Published figures resolve from the public blog without redeploying the admin',await p.locator('#preview-body img').first().getAttribute('src').then(src=>src.startsWith('https://riex71.github.io/computer-study-blog/')));
  const original=await p.locator('#markdown-editor').inputValue(),source=original+'\n\n#### 비공개 편집 검사 {#private-check}\n\n본문 $x_i$와 `code`를 확인합니다.\n';
  await p.locator('#markdown-editor').fill(source);await p.waitForFunction(()=>document.querySelector('#preview-body h4')?.textContent.includes('비공개'));
  ok('The private editor shares Markdown, deep headings and math rendering',await p.locator('#preview-body .katex').count()>0);

@@ -29,6 +29,7 @@ def build():
     writer = (ROOT / 'writer.mjs').read_text(encoding='utf-8')
     writer = "import { SessionPublisher } from './private-admin.mjs';\nimport { connectMigration } from './migration.mjs';\n" + writer
     writer = replace_once(writer, "'posts/'+draft.post.slug+'.html':'index.html'", "new URL('posts/'+draft.post.slug+'.html',LIVE).href:LIVE")
+    writer = replace_once(writer, 'draft.images,draft.post.slug);', 'draft.images,draft.post.slug,LIVE);')
     bootstrap = """async function connectPrivate() {
   const connected = await SessionPublisher.connect();
   publisher?.disconnect(); publisher = connected;

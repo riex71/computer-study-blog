@@ -50,3 +50,14 @@ test('preview resolves relative article, figure and example links from the publi
   const links=[...root(preview).querySelectorAll('a')].map(a=>a.href);
   assert.deepEqual(links,['https://riex71.github.io/computer-study-blog/posts/engram-conditional-memory.html','https://riex71.github.io/computer-study-blog/assets/engram/engram_arch.svg','https://riex71.github.io/computer-study-blog/examples/state_recurrence.py']);
 });
+
+
+test('private previews resolve published images from the public origin while keeping staged images local',()=>{
+ const html=compiler.compile('![새 그림](../assets/uploads/sample/figure.png)\n\n[다른 글](other.html)');
+ const base='https://public.example/blog/';
+ const published=root(compiler.window.EditorContent.preview(html,[],'sample',base));
+ assert.equal(published.querySelector('img').src,'https://public.example/blog/assets/uploads/sample/figure.png');
+ assert.equal(published.querySelector('a').href,'https://public.example/blog/posts/other.html');
+ const staged=root(compiler.window.EditorContent.preview(html,[{path:'assets/uploads/sample/figure.png',type:'image/png',base64:'AQID'}],'sample',base));
+ assert.equal(staged.querySelector('img').src,'data:image/png;base64,AQID');
+});
