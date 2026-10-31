@@ -9,7 +9,7 @@ test('Markdown is authoritative even when the generated HTML is stale',()=>{
     fs.writeFileSync(path.join(dir,'content/posts.json'),JSON.stringify([{slug:'sample',sourceMarkdown:'content/articles/sample.md',sourceHtml:'content/articles/sample.html'}]));
     fs.writeFileSync(path.join(dir,'content/articles/sample.html'),'<p>stale cached HTML</p>');
     fs.writeFileSync(path.join(dir,'content/articles/sample.md'),'## 수정한 제목 {#stable}\n\nMarkdown만 수정한 내용 $h_t$');
-    assert.equal(compileArticles(dir),1);const result=fs.readFileSync(path.join(dir,'content/articles/sample.html'),'utf8');
+    assert.equal(compileArticles(dir),1);const result=fs.readFileSync(path.join(dir,'_site/content/articles/sample.html'),'utf8');assert.equal(fs.readFileSync(path.join(dir,'content/articles/sample.html'),'utf8'),'<p>stale cached HTML</p>');
     assert.match(result,/Markdown만 수정한 내용/);assert.match(result,/id="stable"/);assert.match(result,/math-inline/);assert.ok(!result.includes('stale'));
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });

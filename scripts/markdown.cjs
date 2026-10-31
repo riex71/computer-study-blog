@@ -6,7 +6,7 @@ function createCompiler(){
   for(const file of ['assets/vendor/marked.js','assets/vendor/purify.js','assets/vendor/turndown.js','assets/vendor/katex/katex.min.js','src/js/article-math.js','src/js/editor-content.js'])dom.window.eval(fs.readFileSync(path.join(root,file),'utf8'));
   return {window:dom.window,compile:(md,reference='')=>dom.window.EditorContent.compile(md,reference),close:()=>dom.window.close()};
 }
-function compileArticles(contentRoot=root,outputRoot=contentRoot){
+function compileArticles(contentRoot=root,outputRoot=path.join(contentRoot,'_site')){
   const compiler=createCompiler();
   try{
     const posts=JSON.parse(fs.readFileSync(path.join(contentRoot,'content/posts.json'),'utf8'));
