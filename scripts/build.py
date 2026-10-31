@@ -13,6 +13,7 @@ import subprocess
 import shutil
 import xml.etree.ElementTree as ET
 from outline import table_of_contents
+from admin_entry import admin_entry
 
 ROOT = Path(__file__).resolve().parent.parent
 node = os.environ.get('STUDYBASE_NODE') or shutil.which('node') or shutil.which('node.exe')
@@ -137,5 +138,6 @@ if os.environ.get('GITHUB_SHA'):
     (ROOT/'build.json').write_text(json.dumps({'commit':os.environ['GITHUB_SHA'],'builtAt':datetime.now(timezone.utc).isoformat()}),encoding='utf-8')
 editor_template = (ROOT/'templates/write.html').read_text(encoding='utf-8')
 editor_version = hashlib.sha256((editor_template + ''.join((ROOT/p).read_text(encoding='utf-8') for p in ['writer.mjs','writer.css','editor-content.js','article-math.js','publisher.mjs','draft-store.mjs','article-labs.js','article-code.js','editor-scroll.js','editor-source.js','assets/vendor/prism.js','reader.css','posts/engram.css','assets/vendor/THIRD_PARTY.md'])).encode()).hexdigest()[:12]
-(ROOT/'write.html').write_text(editor_template.replace('{{EDITOR_VERSION}}', editor_version),encoding='utf-8')
+admin_url = os.environ.get('BLOG_ADMIN_URL', '').strip()
+(ROOT/'write.html').write_text(admin_entry(admin_url) if admin_url else editor_template.replace('{{EDITOR_VERSION}}', editor_version),encoding='utf-8')
 print(f'Built {len(POSTS)} posts, home, archive, series, search, RSS and sitemap. Version {VERSION}')
