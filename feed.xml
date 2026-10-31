@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <rss version="2.0">
   <channel>
-    <title>Studybase — AI 공부 기록</title>
+    <title>Studybase — 컴퓨터 과학 노트</title>
     <link>https://riex71.github.io/computer-study-blog/</link>
-    <description>논문을 읽고 원리를 연결하는 윤동현의 AI 공부 기록</description>
+    <description>컴퓨터 과학의 개념과 구현을 공부하며 남기는 기록</description>
     <language>ko-KR</language>
     <item>
       <title>AI도 암기와 사고를 나눠야 할까? DeepSeek Engram</title>
