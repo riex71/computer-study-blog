@@ -1,5 +1,5 @@
 import { HttpError } from './auth.mjs';
-import { GitHubPublisher, base64, LIVE } from '../publisher.mjs';
+import { GitHubPublisher, base64, LIVE } from '../src/js/publisher.mjs';
 const REGISTRY = 'content/deleted-posts.json';
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const fingerprint = async value => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value)))), b => b.toString(16).padStart(2,'0')).join('');

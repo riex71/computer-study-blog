@@ -6,8 +6,10 @@ import json
 import re
 import xml.etree.ElementTree as ET
 
-ROOT = Path(__file__).resolve().parent.parent
-DELETED = {entry['post']['slug'] for entry in json.loads((ROOT/'content/deleted-posts.json').read_text(encoding='utf-8'))}
+SOURCE = Path(__file__).resolve().parent.parent
+ROOT = SOURCE/'_site'
+assert ROOT.is_dir(), 'Run scripts/build.py before validation'
+DELETED = {entry['post']['slug'] for entry in json.loads((SOURCE/'content/deleted-posts.json').read_text(encoding='utf-8'))}
 BASE = 'https://riex71.github.io/computer-study-blog/'
 
 class Document(HTMLParser):
@@ -25,7 +27,7 @@ class Document(HTMLParser):
 
 documents={}
 for file in ROOT.rglob('*.html'):
-    if any(part in file.parts for part in ['.git', 'templates', 'content', '_site', 'node_modules', 'admin']):continue
+    if any(part in file.parts for part in ['content']):continue
     d=Document();d.feed(file.read_text(encoding='utf-8'));documents[file.resolve()]=d
     assert not d.duplicates, f'Duplicate IDs in {file}: {d.duplicates}'
 
@@ -46,7 +48,7 @@ for file, d in documents.items():
         if fragment and target in documents and not documents[target].deleted:assert fragment in documents[target].ids,f'Missing anchor in {file.name}: {link}'
 
 for css in ROOT.rglob('*.css'):
-    if any(part in css.parts for part in ['.git','_site','node_modules','admin']):continue
+    if any(part in css.parts for part in []):continue
     for match in re.finditer(r'url\(\s*[\"\']?([^\)\"\']+)[\"\']?\s*\)',css.read_text(encoding='utf-8')):
         url=urlsplit(match.group(1).strip())
         if url.scheme or url.netloc or not url.path:continue

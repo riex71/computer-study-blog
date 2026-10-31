@@ -1,5 +1,5 @@
 import { ManagedPublisher } from './post-management.mjs';
-import { LIVE } from '../publisher.mjs';
+import { LIVE } from '../src/js/publisher.mjs';
 import { configuration, verifyOwner, verifyMutation, csrfToken, HttpError, beginOAuth, finishOAuth, loginPage, logout, setupProof } from './auth.mjs';
 import { verifyGitHubOwner, REPOSITORY_ID } from './github.mjs';
 

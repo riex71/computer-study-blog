@@ -3,16 +3,16 @@ on:
   pull_request:
     paths:
       - 'admin/**'
-      - 'publisher.mjs'
-      - 'writer.mjs'
+      - 'src/**'
+      - 'scripts/site_files.py'
       - 'templates/write.html'
       - '.github/workflows/admin-check.yml'
   push:
     branches: [main]
     paths:
       - 'admin/**'
-      - 'publisher.mjs'
-      - 'writer.mjs'
+      - 'src/**'
+      - 'scripts/site_files.py'
       - 'templates/write.html'
       - '.github/workflows/admin-check.yml'
 permissions:

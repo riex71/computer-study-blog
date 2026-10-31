@@ -32,7 +32,6 @@ jobs:
           python3 scripts/check.py
           node --test tests/*.test.*
           python3 -m unittest discover -s tests -p 'test_*.py'
-          python3 scripts/package.py
       - uses: actions/upload-pages-artifact@v4
         with:
           path: _site

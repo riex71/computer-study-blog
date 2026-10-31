@@ -5,7 +5,7 @@ const base=process.argv[2]||'http://127.0.0.1:8766/',out=process.env.BLOG_TEST_O
  const ok=(name,value)=>{assert(value,name);checks.push(name);console.log('PASS',name)},monitor=p=>p.on('pageerror',e=>errors.push(e.message));
  const shot=async(p,name)=>{if(out){fs.mkdirSync(out,{recursive:true});await p.screenshot({path:path.join(out,name)})}};
  try{
-  const context=await browser.newContext({viewport:{width:1600,height:1000},reducedMotion:'reduce'}),p=await context.newPage();monitor(p);await p.goto(base+'posts/markdown-stress.html');await p.locator('.engram-hash-demo[data-ready]').waitFor();
+  const context=await browser.newContext({viewport:{width:1600,height:1000},reducedMotion:'reduce'}),p=await context.newPage();monitor(p);await p.goto(base+'posts/markdown-stress.html');await p.locator('.hash-demo[data-ready]').waitFor();
   const visibleHeadings=await p.locator('.public-article h2,.public-article h3,.public-article h4,.public-article h5,.public-article h6').evaluateAll(nodes=>nodes.filter(h=>h.textContent.trim()).length);
   ok('Every non-empty heading through H6 is included in the generated TOC',await p.locator('.article-toc [data-toc-link]').count()===visibleHeadings);
   ok('Deep headings have matching five-level numbered navigation',await p.locator('.article-toc a[href="#deep-six"] .toc-number').textContent()==='2.1.1.1.1.');
@@ -32,7 +32,7 @@ const base=process.argv[2]||'http://127.0.0.1:8766/',out=process.env.BLOG_TEST_O
   await p.setViewportSize({width:390,height:844});await p.goto(base+'posts/markdown-stress.html');await p.locator('.mobile-toc summary').click();await p.locator('.mobile-toc a[href="#deep-six"]').click();ok('Mobile TOC reaches H6 and closes after navigation',!await p.locator('.mobile-toc').evaluate(e=>e.open)&&await p.locator('#deep-six').evaluate(e=>e.getBoundingClientRect().top>=75&&e.getBoundingClientRect().top<180));await shot(p,'deep-toc-mobile.png');
   await p.setViewportSize({width:1440,height:1000});await p.goto(base+'write.html?new=1');await p.waitForFunction(()=>document.querySelector('#writer-boot-lock')?.disabled===false);await p.locator('#post-title').fill('Markdown matrix publication');await p.locator('#markdown-editor').fill(source);await p.waitForFunction(()=>document.querySelectorAll('#preview-body h6').length===1&&document.querySelectorAll('#preview-body .katex').length===6);
   ok('Editor source remains unchanged while rendering the whole stress fixture',(await p.locator('#markdown-editor').inputValue())===source);
-  ok('Preview renders all H2–H6 headings and the interactive component',await p.locator('#preview-body h4').count()===2&&await p.locator('#preview-body h5').count()===1&&await p.locator('#preview-body .engram-hash-demo[data-ready]').count()===1);
+  ok('Preview renders all H2–H6 headings and the interactive component',await p.locator('#preview-body h4').count()===2&&await p.locator('#preview-body h5').count()===1&&await p.locator('#preview-body .hash-demo[data-ready]').count()===1);
   await p.locator('.preview-pane').evaluate(e=>e.scrollTop=0);const beforeURL=p.url();await p.locator('#preview-body a[href="#deep-four"]').first().click();await p.waitForFunction(()=>{const pane=document.querySelector('.preview-pane'),h=pane.querySelector('[data-preview-anchor="deep-four"]');return Math.abs(h.getBoundingClientRect().top-pane.getBoundingClientRect().top-12)<5;});
   ok('Preview internal links scroll locally without opening another tab',p.url()===beforeURL&&context.pages().length===1);
   for(const id of ['deep-five','deep-six']){

@@ -15,11 +15,13 @@ export class SessionPublisher {
     this.disconnect();
   }
   async request(path, body) {
+    const encoded=body?JSON.stringify(body):null;
+    if(encoded&&new Blob([encoded]).size>12*1024*1024)throw Error('이번 게시 요청이 큽니다. 새로 첨부한 그림이나 본문 용량을 줄여 주세요.');
     const response = await fetch('/api/' + path, {
       method: body ? 'POST' : 'GET', cache: 'no-store', credentials: 'same-origin',
       signal: AbortSignal.timeout(120000),
       headers: body ? { 'Content-Type': 'application/json', 'X-Admin-CSRF': this.#csrf } : {},
-      ...(body ? { body: JSON.stringify(body) } : {})
+      ...(body ? { body: encoded } : {})
     });
     const result = await response.json().catch(() => { throw Error('로그인을 다시 확인해 주세요. 원고를 보관한 뒤 새로고침해 주세요.'); });
     if (!response.ok) throw Error(result.error || '요청을 완료하지 못했습니다. 원고를 보관한 뒤 다시 로그인해 주세요.');
@@ -30,6 +32,6 @@ export class SessionPublisher {
   async publish(draft, html, onProgress = () => {}) {
     if (!this.#csrf) throw Error('다시 로그인해 주세요.');
     onProgress('원고를 확인하고 게시하는 중…');
-    return this.request('publish', { draft: { post: draft.post, markdown: draft.markdown, images: draft.images, original: draft.original }, html });
+    return this.request('publish', { draft: { post: draft.post, markdown: draft.markdown, images: (draft.images||[]).filter(image=>!image.published), original: draft.original }, html });
   }
 }

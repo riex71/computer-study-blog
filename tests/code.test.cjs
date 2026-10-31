@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{createCompiler}=require('../scripts/markdown.cjs');
 const compiler=createCompiler(),{window}=compiler;
-for(const file of ['assets/vendor/prism.js','article-code.js'])window.eval(fs.readFileSync(path.join(__dirname,'..',file),'utf8'));
+for(const file of ['assets/vendor/prism.js','src/js/article-code.js'])window.eval(fs.readFileSync(path.join(__dirname,'..',file),'utf8'));
 test.after(()=>compiler.close());
 function display(md){const root=window.document.createElement('div');root.innerHTML=compiler.compile(md);window.StudyCode.mount(root);return root;}
 test('Python and JavaScript aliases get language labels and syntax tokens without changing code',()=>{

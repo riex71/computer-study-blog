@@ -62,7 +62,6 @@ export class GitHubPublisher {
     if (index >= 0) posts[index] = post; else posts.push(post);
     posts.sort((a, b) => b.date.localeCompare(a.date));
     const files = [
-      { path: post.sourceHtml, text: html + '\n' },
       { path: post.sourceMarkdown, text: draft.markdown + '\n' },
       { path: 'content/posts.json', text: JSON.stringify(posts, null, 2) + '\n' }
     ];
@@ -72,7 +71,7 @@ export class GitHubPublisher {
       const blob = await this.request('git/blobs', 'POST', { content: base64(file.text), encoding: 'base64' });
       tree.push({ path: file.path, mode: '100644', type: 'blob', sha: blob.sha });
     }
-    for (const image of draft.images || []) {
+    for (const image of (draft.images || []).filter(image=>!image.published)) {
       if (!image.path.startsWith('assets/uploads/' + slug + '/') || !/^assets\/uploads\/[a-z0-9-]+\/[a-z0-9.-]+\.(?:png|jpg|webp)$/.test(image.path)) throw Error('첨부 이미지 경로가 올바르지 않습니다.');
       const blob = await this.request('git/blobs', 'POST', { content: image.base64, encoding: 'base64' });
       tree.push({ path: image.path, mode: '100644', type: 'blob', sha: blob.sha });

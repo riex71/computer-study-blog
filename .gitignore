@@ -1,6 +1,5 @@
 
 _site/
-build.json
 node_modules/
 __pycache__/
 admin/dist/
