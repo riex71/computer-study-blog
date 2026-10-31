@@ -1,4 +1,4 @@
-const test=require('node:test'),assert=require('node:assert/strict'),{interpolate}=require('../editor-scroll.js');
+const test=require('node:test'),assert=require('node:assert/strict'),{interpolate}=require('../src/js/editor-scroll.js');
 test('linked scroll positions interpolate within each section in either direction',()=>{
  const points=[[0,0],[100,400],[300,500],[500,1000]];
  assert.equal(interpolate(50,points),200);assert.equal(interpolate(200,points),450);

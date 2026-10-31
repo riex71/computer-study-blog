@@ -1,3 +1,4 @@
+import {processImage,encodeImage} from './image-processing.mjs';
 const { GitHubPublisher, LIVE } = await import('./publisher.mjs' + new URL(import.meta.url).search);
 const { DraftStore, draftVersion } = await import('./draft-store.mjs' + new URL(import.meta.url).search);
 const $ = s => document.querySelector(s);
@@ -43,7 +44,7 @@ function updateContext(){
   $('#reload-published').hidden=!editing;$('#reload-published-note').hidden=!editing;document.title=(draft.post.title||'글쓰기')+' — Studybase';
 }
 function blank() {
-  return { id: crypto.randomUUID(), post: { title:'', description:'', deck:'', shortTitle:'', slug:'', date:today(), category:'논문 리뷰', topics:[], tags:[], thumbnail:'assets/social-cover.png', thumbnailAlt:'', thumbnailCredit:'', thumbnailSource:'' }, markdown:'', images:[], original:null, savedAt:new Date().toISOString() };
+  return { id: crypto.randomUUID(), post: { title:'', description:'', deck:'', shortTitle:'', slug:'', date:today(), category:'공부 노트', topics:[], tags:[], thumbnail:'assets/social-cover.png', thumbnailAlt:'', thumbnailCredit:'', thumbnailSource:'' }, markdown:'', images:[], original:null, savedAt:new Date().toISOString() };
 }
 function collect() {
   if (!draft) return;
@@ -250,28 +251,21 @@ $('#open-markdown-help').addEventListener('click',()=>{document.querySelector('.
 async function attachImages(files){
   if(!files.length||busy)return;ensureSlug(true);collect();
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(draft.post.slug)) { message('그림을 넣기 전에 ‘글 정보’에서 글 주소를 정해 주세요.'); openDialog('settings-dialog');$('#post-slug').focus(); return; }
-  if (files.some(file=>!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>5*1024*1024)) { message('PNG, JPG, WebP 그림을 5MB 이하로 첨부해 주세요.'); return; }
-  if (draft.images.reduce((n,i) => n + i.base64.length, 0)+files.reduce((n,f)=>n+Math.ceil(f.size/3)*4,0) > 32 * 1024 * 1024) { message('이 원고의 그림 용량이 큽니다. 먼저 게시한 뒤 이어서 첨부해 주세요.'); return; }
-  busy=true;const unlock=lockEditor();message('그림을 읽는 중입니다…');
+  busy=true;const unlock=lockEditor();message('그림을 처리하는 중…');
   try {
     await save();
-    const staged=[];
+    const staged=[],mode=$('#image-mode').value;let before=0,after=0;
     for(const file of files){
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const png = bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71;
-    const jpg = bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
-    const webp = String.fromCharCode(...bytes.slice(0,4)) === 'RIFF' && String.fromCharCode(...bytes.slice(8,12)) === 'WEBP';
-    if (!(file.type === 'image/png' && png || file.type === 'image/jpeg' && jpg || file.type === 'image/webp' && webp)) throw Error('이미지 파일 형식을 확인해 주세요.');
-    const bitmap = await createImageBitmap(file),width=bitmap.width,height=bitmap.height; bitmap.close();
-    let binary = ''; for (let i=0;i<bytes.length;i+=8192) binary += String.fromCharCode(...bytes.subarray(i,i+8192));
-    const ext = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1];
-    const path = 'assets/uploads/' + draft.post.slug + '/' + Date.now() + '-' + crypto.randomUUID().slice(0,8) + '.' + ext;
-    staged.push({path,type:file.type,base64:btoa(binary),width,height});
+      const result=await processImage(file,{mode}),image=await encodeImage(result,draft.post.slug);
+      before+=result.originalBytes;after+=result.outputBytes;
+      if(!staged.some(item=>item.path===image.path)&&!draft.images.some(item=>item.path===image.path))staged.push(image);
     }
+    if([...draft.images.filter(image=>!image.published),...staged].reduce((sum,image)=>sum+image.base64.length,0)>8*1024*1024)throw Error('이 원고에 새로 첨부할 그림의 용량을 줄여 주세요. 먼저 게시한 뒤 이어서 첨부할 수 있습니다.');
+    if(draft.images.filter(image=>!image.published).length+staged.length>30)throw Error('한 번에 새 그림은 30개까지 첨부할 수 있습니다.');
     draft.images.push(...staged);
     const editor = $('#markdown-editor'), insert = staged.map(image=>'\n\n<img src="../'+image.path+'" width="'+image.width+'" height="'+image.height+'" alt="그림 설명을 적어주세요">\n\n그림 설명: 설명과 출처를 적어주세요.\n').join('');
     editor.setRangeText(insert, editor.selectionStart, editor.selectionEnd, 'end');
-    $('#post-slug').disabled = true; collect(); renderPreview(); await save(); message('그림을 첨부했습니다. 설명과 출처를 적어주세요.');
+    $('#post-slug').disabled = true; collect(); renderPreview(); await save(); message(staged.length?'그림을 첨부했습니다.'+(after<before?' '+Math.round((1-after/before)*100)+'% 용량을 줄였습니다.':' 원본을 유지했습니다.')+' 설명과 출처를 적어주세요.':'이미 첨부한 그림입니다.');
   } catch (error) { message(error.message || '그림을 불러오지 못했습니다.'); }
   finally{busy=false;unlock();$('#post-slug').disabled=!!draft.original||!!draft.images.length;renderDrafts();}
 }
@@ -400,7 +394,7 @@ $('#publish-button').addEventListener('click', async () => {
     submitted.markdown=EditorContent.toMarkdown(html);
     html=EditorContent.compile(submitted.markdown);
     const result = await publisher.publish(submitted, html, text => $('#publish-status').textContent = text);
-    accepted=true;
+    accepted=true;for(const image of draft.images)image.published=result.sha;
     draft.post = result.post;draft.markdown=result.markdown;$('#markdown-editor').value=result.markdown; draft.original = {post:structuredClone(result.post),markdown:result.markdown,html:result.html};draft.deployment={sha:result.sha,url:result.url,status:'building'};updateContext();renderPreview();
     await save(); $('#publish-status').textContent = '원고를 GitHub에 저장했습니다. 블로그를 배포하는 중입니다…';
     $('#publish-button').hidden = true; $('#deployment-link').href = 'https://github.com/riex71/computer-study-blog/actions'; $('#deployment-link').hidden = false;

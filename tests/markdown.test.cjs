@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
 const root=path.join(__dirname,'..'),sandbox={window:{},document:{readyState:'loading',addEventListener(){}}};
-vm.createContext(sandbox);vm.runInContext(fs.readFileSync(path.join(root,'assets/vendor/marked.js'),'utf8'),sandbox);vm.runInContext(fs.readFileSync(path.join(root,'article-math.js'),'utf8'),sandbox);sandbox.marked.use({extensions:sandbox.window.StudyMath.extensions});
+vm.createContext(sandbox);vm.runInContext(fs.readFileSync(path.join(root,'assets/vendor/marked.js'),'utf8'),sandbox);vm.runInContext(fs.readFileSync(path.join(root,'src/js/article-math.js'),'utf8'),sandbox);sandbox.marked.use({extensions:sandbox.window.StudyMath.extensions});
 const parse=source=>sandbox.marked.parse(source,{gfm:true}),katex=require('../assets/vendor/katex/katex.min.js');
 test('inline math preserves subscripts and TeX commands before Markdown tokenization',()=>{
  const html=parse(String.raw`state $h_{t-1} + \alpha$ remains inline`);assert.match(html,/<span class="math-inline">h_\{t-1\} \+ \\alpha<\/span>/);assert.ok(!html.includes('<em>'));

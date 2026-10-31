@@ -1,6 +1,6 @@
 /* Keep editable Markdown separate from safe canonical HTML and rendered math. */
 (() => {
-  const hashDemo={name:'engramHashDemo',level:'block',start:source=>{const index=source.indexOf(':::engram-hash-demo');return index<0?undefined:index;},tokenizer(source){const match=/^ {0,3}:::engram-hash-demo[^\S\n]*\n {0,3}:::[^\S\n]*(?:\n|$)/.exec(source);if(match)return {type:'engramHashDemo',raw:match[0]};},renderer:()=>'<div class="engram-hash-demo"></div>\n'};
+  const hashDemo={name:'hashDemo',level:'block',start:source=>{const match=/:::(?:engram-)?hash-demo/.exec(source);return match?match.index:undefined;},tokenizer(source){const match=/^ {0,3}:::(?:engram-)?hash-demo[^\S\n]*\n {0,3}:::[^\S\n]*(?:\n|$)/.exec(source);if(match)return {type:'hashDemo',raw:match[0]};},renderer:()=>'<div class="hash-demo"></div>\n'};
   marked.use({extensions:[...StudyMath.extensions,hashDemo],tokenizer:{del(source){return source.startsWith('~~')?false:undefined;}},renderer:{heading({tokens,depth}){
     depth=Math.max(2,depth);let title=this.parser.parseInline(tokens);const match=/\s*\{#([\w가-힣-]+)\}$/.exec(title),id=match?match[1]:'';
     if(match)title=title.slice(0,match.index);
@@ -8,9 +8,9 @@
   }}});
   const tags=['p','br','h1','h2','h3','h4','h5','h6','ul','ol','li','input','a','img','figure','figcaption','table','thead','tbody','tfoot','tr','th','td','caption','pre','code','blockquote','hr','em','s','del','sub','sup','span','div','section','dl','dt','dd','details','summary'];
   const policy={ALLOWED_TAGS:tags,ALLOWED_ATTR:['href','src','alt','title','id','class','type','checked','disabled','align','colspan','rowspan','scope','width','height','start','open','aria-labelledby'],ALLOW_DATA_ATTR:false,ALLOW_ARIA_ATTR:false,FORBID_ATTR:['style'],ALLOW_UNKNOWN_PROTOCOLS:false};
-  const classes=/^(?:align-(?:left|center|right)|note-figure|paper-figure|figure-note|article-sources|source-list|formula|equation|table-wrap|table-caption|note|callout|language-[a-z0-9+.#-]+|source-note|figure-grid|reference-list|engram-editor-note|engram-equation|engram-image-link|engram-paper-figure|engram-table|engram-table-wrap|engram-hash-demo|math-inline|math-display)$/;
+  const classes=/^(?:align-(?:left|center|right)|note-figure|paper-figure|figure-note|article-sources|source-list|formula|equation|table-wrap|table-caption|note|callout|language-[a-z0-9+.#-]+|source-note|figure-grid|reference-list|article-table|figure-link|hash-demo|math-inline|math-display)$/;
   const textKey=node=>node.textContent.replace(/\s+/g,' ').trim();
-  function documentOf(html){const root=document.createElement('div');root.innerHTML=DOMPurify.sanitize(html,policy);return root;}
+  function documentOf(html){const root=document.createElement('div');root.innerHTML=DOMPurify.sanitize(html,policy);const legacy={'engram-hash-demo':'hash-demo','engram-editor-note':'callout','engram-equation':'equation','engram-image-link':'figure-link','engram-paper-figure':'paper-figure','engram-table':'article-table','engram-table-wrap':'table-wrap'};root.querySelectorAll('[class]').forEach(node=>{for(const name of [...node.classList])if(legacy[name]){node.classList.remove(name);node.classList.add(legacy[name]);}});return root;}
   function compile(markdown,referenceHTML='') {
     const rendered=marked.parse(markdown,{breaks:false,gfm:true}),root=documentOf(rendered),reference=documentOf(referenceHTML);
     const requestedAnchors=[...rendered.matchAll(/<h[1-6]\b([^>]*)>/gi)].map(match=>/\bid="([\w가-힣-]+)"/.exec(match[1])?.[1]);
@@ -27,7 +27,7 @@
       img.setAttribute('loading','lazy');img.setAttribute('decoding','async');
     });
     root.querySelectorAll('[class]').forEach(el=>{const allowed=el.className.split(/\s+/).filter(c=>classes.test(c));if(allowed.length)el.className=allowed.join(' ');else el.removeAttribute('class');});
-    root.querySelectorAll('.engram-hash-demo').forEach(node=>{node.replaceChildren();const fallback=document.createElement('p');fallback.textContent='해시 충돌 실험은 JavaScript를 켜면 사용할 수 있습니다.';node.append(fallback);});
+    root.querySelectorAll('.hash-demo').forEach(node=>{node.replaceChildren();const fallback=document.createElement('p');fallback.textContent='해시 충돌 실험은 JavaScript를 켜면 사용할 수 있습니다.';node.append(fallback);});
     const priorImages=new Map([...reference.querySelectorAll('figure img')].map(img=>[img.getAttribute('src'),img]));
     for(const node of [...root.children])if(node.tagName==='IMG'||node.tagName==='A'&&node.querySelectorAll('img').length===1&&!node.textContent.trim()){
       const paragraph=document.createElement('p');node.before(paragraph);paragraph.append(node);
@@ -53,7 +53,6 @@
       if(prev?.tagName==='P'&&/^표 설명:\s*/.test(prev.textContent)){
         const caption=document.createElement('caption');caption.innerHTML=prev.innerHTML.replace(/^표 설명:\s*/,'');table.prepend(caption);prev.remove();
       }
-      if(reference.querySelectorAll('table')[index]?.classList.contains('engram-table'))table.classList.add('engram-table');
       const oldRows=reference.querySelectorAll('table')[index]?.querySelectorAll('tbody tr');
       table.querySelectorAll('thead th').forEach(th=>th.scope='col');
       table.querySelectorAll('th,td').forEach(cell=>{const align=cell.getAttribute('align');if(['left','center','right'].includes(align))cell.classList.add('align-'+align);cell.removeAttribute('align');});
@@ -82,10 +81,10 @@
     const source=documentOf(html);
     source.querySelectorAll('span[id]:empty').forEach(node=>{node.textContent='\u200b';node.setAttribute('data-study-anchor','true');});
     source.querySelectorAll('h2:empty,h3:empty,h4:empty,h5:empty,h6:empty').forEach(node=>{node.textContent='\u200b';node.setAttribute('data-study-empty-heading','true');});
-    source.querySelectorAll('.engram-hash-demo').forEach(node=>node.textContent='\u200b');
+    source.querySelectorAll('.hash-demo').forEach(node=>node.textContent='\u200b');
     source.querySelectorAll('.math-inline,.math-display').forEach(node=>node.setAttribute('data-study-tex',node.textContent));
     const td=new TurndownService({headingStyle:'atx',codeBlockStyle:'fenced',bulletListMarker:'-',emDelimiter:'_',blankReplacement:(_content,node)=>node.nodeName==='SPAN'&&node.id?node.outerHTML:node.isBlock?'\n\n':''});
-    td.addRule('article-labs',{filter:node=>node.classList?.contains('engram-hash-demo'),replacement:()=> '\n\n:::engram-hash-demo\n:::\n\n'});
+    td.addRule('article-labs',{filter:node=>node.classList?.contains('hash-demo'),replacement:()=> '\n\n:::hash-demo\n:::\n\n'});
     td.addRule('anchor-spans',{filter:node=>node.nodeName==='SPAN'&&!!node.id,replacement:(_content,node)=>node.hasAttribute('data-study-anchor')?'<span id="'+node.id+'"></span>':node.outerHTML});
     td.addRule('anchored-headings',{filter:['h2','h3','h4','h5','h6'],replacement:(content,node)=>'\n\n'+'#'.repeat(Number(node.tagName.slice(1)))+' '+(node.hasAttribute('data-study-empty-heading')?'':content.trim())+(node.id?' {#'+node.id+'}':'')+'\n\n'});
     td.addRule('strike',{filter:['del','s'],replacement:content=>'~~'+content+'~~'});

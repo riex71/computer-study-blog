@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ManagedPublisher } from '../post-management.mjs';
-import { base64,unbase64 } from '../../publisher.mjs';
+import { base64,unbase64 } from '../../src/js/publisher.mjs';
 const post={slug:'test-article',title:'삭제 확인 글',date:'2026-10-31',tags:[],topics:[],sourceMarkdown:'content/articles/test-article.md',sourceHtml:'content/articles/test-article.html'};
 function repository(){
  let head='a'.repeat(40),counter=0,heads=0,race=false,lose=false,reject=false;const calls=[],files=new Map([['content/posts.json',JSON.stringify([post])],['content/deleted-posts.json','[]'],[post.sourceMarkdown,'## 제목\n\n원문'],[post.sourceHtml,'<h2>제목</h2><p>원문</p>']]),blobs=new Map(),trees=new Map(),commits=new Map();

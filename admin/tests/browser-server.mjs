@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { createHandler } from '../worker.mjs';
 import { environment,login,origin,token } from './helpers.mjs';
 import { OWNER_ID,OWNER_LOGIN,REPOSITORY_ID,REPOSITORY } from '../github.mjs';
-const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..'),dist=path.join(root,'admin/dist'),env=environment();
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..'),dist=path.join(root,'admin/dist'),publicRoot=path.join(root,'_site'),env=environment();
 let head='a'.repeat(40),counter=0,fixtureCookie='';const blobs=new Map(),files=new Map(),pending=[],commits=[];
 async function textFile(name){return files.has(name)?files.get(name):fs.readFile(path.join(root,name),'utf8');}
 const fetchImpl=async(url,init={})=>{
@@ -45,4 +45,4 @@ http.createServer(async(req,res)=>{try{
  res.writeHead(response.status);res.end(Buffer.from(await response.arrayBuffer()));
 }catch{res.writeHead(500).end('Test adapter failed');}}).listen(8767,'127.0.0.1',()=>console.log('Private GitHub login test server: http://127.0.0.1:8767/write.html'));
 
-http.createServer(async(req,res)=>{const rel=new URL(req.url,'http://127.0.0.1:8769').pathname,name=path.resolve(root,'.'+rel);if(!name.startsWith(root+path.sep)){res.writeHead(403).end();return;}try{let data=await fs.readFile(name);if(path.basename(name)==='draft-migration.html')data=Buffer.from(data.toString('utf8').replace('data-admin-origin="https://studybase-admin.dmcydh1804.workers.dev"','data-admin-origin="http://127.0.0.1:8767"'));res.writeHead(200,{'Content-Type':mime[path.extname(name)]||'application/octet-stream','Cache-Control':'no-store'}).end(data);}catch{res.writeHead(404).end();}}).listen(8769,'127.0.0.1',()=>console.log('Isolated old-origin draft store: http://127.0.0.1:8769/'));
+http.createServer(async(req,res)=>{const rel=new URL(req.url,'http://127.0.0.1:8769').pathname.replace(/^\/$/,'/index.html'),name=path.resolve(publicRoot,'.'+rel);if(!name.startsWith(publicRoot+path.sep)){res.writeHead(403).end();return;}try{let data=await fs.readFile(name);if(path.basename(name)==='draft-migration.html')data=Buffer.from(data.toString('utf8').replace('data-admin-origin="https://studybase-admin.dmcydh1804.workers.dev"','data-admin-origin="http://127.0.0.1:8767"'));res.writeHead(200,{'Content-Type':mime[path.extname(name)]||'application/octet-stream','Cache-Control':'no-store'}).end(data);}catch{res.writeHead(404).end();}}).listen(8769,'127.0.0.1',()=>console.log('Isolated old-origin draft store: http://127.0.0.1:8769/'));

@@ -140,7 +140,7 @@
       img.dataset.zoomable = '';
       let trigger=img.closest('a');
       if(!trigger){trigger=document.createElement('button');trigger.type='button';trigger.className='figure-zoom-trigger';img.before(trigger);trigger.append(img);}
-      trigger.setAttribute('aria-haspopup','dialog');trigger.setAttribute('aria-label',(img.alt||'논문 그림')+' 크게 보기');
+      trigger.setAttribute('aria-haspopup','dialog');trigger.setAttribute('aria-label',(img.alt||'본문 그림')+' 크게 보기');
       const open = () => { zoomImg.src = img.currentSrc || img.src; zoomImg.alt = img.alt; caption.textContent = img.closest('figure')?.querySelector('figcaption')?.textContent || img.alt; zoom.showModal(); close.focus(); };
       trigger.addEventListener('click',e=>{e.preventDefault();open();});
       if(trigger.tagName==='A')trigger.addEventListener('keydown',e=>{if(e.key===' '){e.preventDefault();open();}});
@@ -148,7 +148,7 @@
     zoom.addEventListener('click', e => { if (e.target === zoom) zoom.close(); });
 
     article.querySelectorAll('table').forEach(table=>{
-      if(table.parentElement.matches('.engram-table-wrap,.table-scroll'))return;
+      if(table.parentElement.matches('.table-wrap,.table-scroll'))return;
       const wrapper=document.createElement('div');wrapper.className='table-scroll';wrapper.tabIndex=0;wrapper.setAttribute('role','region');wrapper.setAttribute('aria-label',(table.querySelector('caption')?.textContent.trim()||'본문 표')+', 가로 스크롤 가능');table.before(wrapper);wrapper.append(table);
     });
     const mobileToc=$('.mobile-toc'),articleTools=$('.article-tools');

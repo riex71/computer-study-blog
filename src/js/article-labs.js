@@ -1,4 +1,4 @@
-/* A small explanatory model, not Engram's tokenizer or production hash. */
+/* A small reusable hash-collision experiment for any article. */
 (() => {
   function address(tokens,head,buckets){
     let value=(2166136261^Math.imul(head+1,2654435761))>>>0;
@@ -15,7 +15,7 @@
     return {rows,firstHead,allHeads};
   }
   function mount(root=document){
-    root.querySelectorAll('.engram-hash-demo:not([data-ready])').forEach(host=>{
+    root.querySelectorAll('.hash-demo:not([data-ready])').forEach(host=>{
       host.dataset.ready='true';
       host.replaceChildren();
       const el=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
@@ -27,7 +27,7 @@
       const status=el('p');status.className='lab-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
       const wrap=el('div');wrap.className='lab-table';wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','토큰 묶음별 조회 주소');
       const table=el('table');wrap.append(table);
-      host.append(controls,label,status,wrap,el('p','단순화한 32비트 해시의 주소만 비교합니다. 실제 Engram의 해시·토큰화·학습 임베딩과 다르며, 여러 head도 충돌을 완전히 없애지는 않습니다. 중복 입력은 하나로 셉니다.'));
+      host.append(controls,label,status,wrap,el('p','단순화한 32비트 해시의 주소만 비교합니다. 실제 서비스의 해시·토큰화·학습 임베딩을 재현하지 않으며, 여러 head도 충돌을 완전히 없애지는 않습니다. 중복 입력은 하나로 셉니다.'));
       function render(){
         const parts=input.value.split('|').map(value=>value.trim()).filter(Boolean);
         if(parts.length<2||parts.length>12||parts.some(value=>!/^\d+(?:\s+\d+){1,3}$/.test(value)||value.split(/\s+/).some(token=>Number(token)>1000000))){status.textContent='0~1000000 사이의 ID 2~4개를 묶어 주세요. 서로 다른 묶음 2~12개를 |로 구분합니다.';table.replaceChildren();return;}

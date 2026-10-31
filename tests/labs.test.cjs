@@ -1,4 +1,4 @@
-const test=require('node:test'),assert=require('node:assert/strict'),{address,analyse}=require('../article-labs.js');
+const test=require('node:test'),assert=require('node:assert/strict'),{address,analyse}=require('../src/js/article-labs.js');
 test('explanatory addresses are repeatable and remain in the chosen table',()=>{
   for(const buckets of [4,8,16,32])for(let head=0;head<4;head++){
     const value=address([7,11,5],head,buckets);assert.equal(value,address([7,11,5],head,buckets));assert.ok(value>=0&&value<buckets);

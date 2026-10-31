@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { GitHubPublisher, base64, unbase64 } from '../publisher.mjs';
+import { GitHubPublisher, base64, unbase64 } from '../src/js/publisher.mjs';
 const post = { slug:'sample-note', title:'한글 원고', date:'2026-10-30', topics:['메모리'], tags:['AI'], sourceHtml:'content/articles/sample-note.html', sourceMarkdown:'content/articles/sample-note.md' };
 function server({ posts = [], files = {}, race = false, rejectRef = false, loseRefResponse = false } = {}) {
   const original = globalThis.fetch, calls = []; let head = 'base', heads = 0;
@@ -40,7 +40,7 @@ test('publishes sources, metadata and raster image atomically',async()=>{
  const api=server();try{
   await new GitHubPublisher('test-token').publish({post,markdown:'## 기억\n\n본문',images:[{path:'assets/uploads/sample-note/figure.png',base64:'AQID'}]},'<h2>기억</h2><p>본문</p>');
   const tree=api.calls.find(c=>c.path==='git/trees').body;
-  assert.equal(tree.base_tree,'old-tree');assert.equal(tree.tree.length,4);assert.equal(api.head(),'new-commit');
+  assert.ok(!tree.tree.some(file=>file.path.endsWith('.html')));assert.equal(tree.base_tree,'old-tree');assert.equal(tree.tree.length,3);assert.equal(api.head(),'new-commit');
   assert.deepEqual(api.calls.find(c=>c.path==='git/commits').body.parents,['base']);
  }finally{api.restore()}
 });
@@ -73,4 +73,8 @@ test('recovers an accepted commit when the update response is lost',async()=>{
   const result=await new GitHubPublisher('test-token').publish({post,markdown:'text',images:[]},'<p>text</p>');
   assert.equal(result.sha,'new-commit');assert.equal(api.calls.filter(c=>c.method==='PATCH').length,1);
  }finally{api.restore()}
+});
+
+test('already-published image bytes are not uploaded again',async()=>{
+ const api=server();try{await new GitHubPublisher('test-token').publish({post,markdown:'본문',images:[{path:'assets/uploads/sample-note/old.png',base64:'AQID',published:'old-commit'}]},'<p>본문</p>');const tree=api.calls.find(c=>c.path==='git/trees').body.tree;assert.deepEqual(tree.map(f=>f.path).sort(),['content/articles/sample-note.md','content/posts.json']);}finally{api.restore()}
 });

@@ -3,6 +3,9 @@ from pathlib import Path
 import hashlib
 import shutil
 import re
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parent.parent/'scripts'))
+from site_files import copy_runtime
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -18,19 +21,15 @@ def build():
     if OUT.exists():
         shutil.rmtree(OUT)
     OUT.mkdir()
-    for source in ROOT.iterdir():
-        if source.is_file() and source.suffix in {'.css', '.js', '.mjs'}:
-            shutil.copy2(source, OUT / source.name)
+    copy_runtime(OUT)
     shutil.copytree(ROOT / 'assets', OUT / 'assets')
-    (OUT / 'posts').mkdir()
-    shutil.copy2(ROOT / 'posts/engram.css', OUT / 'posts/engram.css')
     shutil.copy2(HERE / 'private-admin.mjs', OUT / 'private-admin.mjs')
     shutil.copy2(HERE / 'migration.mjs', OUT / 'migration.mjs')
 
     for name in ['manage-posts.mjs','manage-posts.css']:
         shutil.copy2(HERE / name, OUT / name)
 
-    writer = (ROOT / 'writer.mjs').read_text(encoding='utf-8')
+    writer = (ROOT / 'src/js/writer.mjs').read_text(encoding='utf-8')
     writer = "import { createPostManager } from './manage-posts.mjs';\nimport { SessionPublisher } from './private-admin.mjs';\nimport { connectMigration } from './migration.mjs';\n" + writer
     writer = replace_once(writer, "'posts/'+draft.post.slug+'.html':'index.html'", "new URL('posts/'+draft.post.slug+'.html',LIVE).href:LIVE")
     writer = replace_once(writer, 'draft.images,draft.post.slug);', 'draft.images,draft.post.slug,LIVE);')

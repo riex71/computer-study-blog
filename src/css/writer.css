@@ -67,3 +67,5 @@ textarea{font:inherit;color:inherit;resize:vertical}button,input,textarea,select
 .history-list button{flex-shrink:0;border:1px solid var(--line);border-radius:3px;background:none;padding:8px 10px;color:var(--muted);font-size:11px}
 .history-list button[aria-pressed=true]{border-color:var(--accent);color:var(--ink);background:var(--wash)}
 #history-source{display:block;width:100%;height:36vh;min-height:180px;margin:12px 0 18px;padding:14px;resize:vertical;font:13px/1.9 var(--mono);background:var(--wash);border:1px solid var(--line);border-radius:3px;white-space:pre-wrap;overflow-wrap:anywhere}
+
+.image-settings{margin-top:20px}.image-settings select{display:block;margin:8px 0}.image-settings small{display:block;font-size:11px;line-height:1.8}
