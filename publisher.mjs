@@ -48,6 +48,7 @@ export class GitHubPublisher {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw Error('글 주소에는 영문 소문자, 숫자, 하이픈을 사용해 주세요.');
     onProgress('최신 원고 확인 중…');
     const base = await this.head();
+    await this.verifyPublicationAt?.(base, draft);
     const commit = await this.request('git/commits/' + base);
     const posts = JSON.parse(await this.file('content/posts.json', base));
     const index = posts.findIndex(p => p.slug === slug), remote = posts[index];

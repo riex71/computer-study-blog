@@ -1,4 +1,5 @@
-import { GitHubPublisher, LIVE } from '../publisher.mjs';
+import { ManagedPublisher } from './post-management.mjs';
+import { LIVE } from '../publisher.mjs';
 import { configuration, verifyOwner, verifyMutation, csrfToken, HttpError, beginOAuth, finishOAuth, loginPage, logout, setupProof } from './auth.mjs';
 import { verifyGitHubOwner, REPOSITORY_ID } from './github.mjs';
 
@@ -62,7 +63,7 @@ export function validatePublication(body) {
   return { post: cleanPost, markdown: draft.markdown, images, original: original || null };
 }
 export function createHandler({ fetchImpl = fetch, publisherFor } = {}) {
-  publisherFor ||= token => new GitHubPublisher(token, 'main', (url, init) => fetchImpl(url, { ...init, headers: { ...init.headers, 'User-Agent': 'Studybase-Private-Admin' } }));
+  publisherFor ||= token => new ManagedPublisher(token, 'main', (url, init) => fetchImpl(url, { ...init, headers: { ...init.headers, 'User-Agent': 'Studybase-Private-Admin' } }));
   return async function handle(request, env) {
     try {
       configuration(env);
@@ -73,7 +74,7 @@ export function createHandler({ fetchImpl = fetch, publisherFor } = {}) {
       let identity;
       try { identity = await verifyOwner(request, env); }
       catch (error) {
-        if (error.status === 401 && request.method === 'GET' && ['/','/index.html','/write.html'].includes(url.pathname)) return privateResponse(loginPage(request));
+        if (error.status === 401 && request.method === 'GET' && ['/','/index.html','/write.html','/write'].includes(url.pathname)) return privateResponse(loginPage(request));
         throw error;
       }
       if (!['GET','HEAD','POST'].includes(request.method)) throw new HttpError(405, '지원하지 않는 요청입니다.');
@@ -92,6 +93,16 @@ export function createHandler({ fetchImpl = fetch, publisherFor } = {}) {
           if (path !== 'content/posts.json' && !safeSource.test(path || '')) throw new HttpError(400, '허용하지 않는 원고 경로입니다.');
           if (!/^[a-f0-9]{40}$/.test(ref || '')) throw new HttpError(400, '원고 버전을 다시 확인해 주세요.');
           response = json({ text: await publisher.file(path, ref) });
+        } else if (request.method === 'GET' && url.pathname === '/api/posts') {
+          response = json(await publisher.state());
+        } else if (request.method === 'GET' && url.pathname === '/api/post-snapshot') {
+          response = json(await publisher.snapshot(url.searchParams.get('slug')));
+        } else if (request.method === 'POST' && ['/api/delete-post','/api/restore-post'].includes(url.pathname)) {
+          await verifyMutation(request, identity, env);
+          const body = await bodyOf(request);
+          await verifyGitHubOwner(identity.token, env, fetchImpl);
+          await publisher.connect();
+          response = json(await (url.pathname === '/api/delete-post' ? publisher.deletePost(body) : publisher.restorePost(body)));
         } else if (request.method === 'POST' && url.pathname === '/api/publish') {
           await verifyMutation(request, identity, env);
           const body = await bodyOf(request), draft = validatePublication(body);

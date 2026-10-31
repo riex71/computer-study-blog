@@ -36,3 +36,18 @@ test('unknown writes, arbitrary refs and path escapes cannot reach GitHub',async
 test('oversize requests and uploads for a different post fail before mutation',async()=>{const s=await setup(),csrf=(await(await s.request('/api/session')).json()).csrf,bad=publication();bad.draft.images=[{path:'assets/uploads/other/a.png',base64:'AQID',type:'image/png'}];assert.equal((await s.request('/api/publish',{body:bad,headers:{'X-Admin-CSRF':csrf}})).status,400);assert.equal((await s.request('/api/publish',{body:publication(),headers:{'X-Admin-CSRF':csrf,'Content-Length':String(13*1024*1024)}})).status,413);});
 test('logout requires CSRF and removes the server session without deleting drafts',async()=>{const s=await setup(),csrf=(await(await s.request('/api/session')).json()).csrf;assert.equal((await s.request('/auth/logout',{body:{}})).status,403);const r=await s.request('/auth/logout',{body:{},headers:{'X-Admin-CSRF':csrf}});assert.equal(r.status,200);assert.ok(r.headers.get('Set-Cookie').includes('Max-Age=0'));assert.equal((await s.request('/api/head')).status,401);});
 test('setup confirmation verifies write with a detached blob and signs only an attestation',async()=>{const s=await setup();s.env.SETUP_NONCE='setup-test-nonce';const csrf=(await(await s.request('/api/session')).json()).csrf;const r=await s.request('/api/setup/verify',{body:{nonce:s.env.SETUP_NONCE},headers:{'X-Admin-CSRF':csrf}});assert.equal(r.status,200);const {proof}=await r.json(),{payload}=await jwtVerify(proof,new Uint8Array(await crypto.subtle.sign('HMAC',await crypto.subtle.importKey('raw',base64url.decode(s.env.SESSION_SECRET),{name:'HMAC',hash:'SHA-256'},false,['sign']),new TextEncoder().encode('studybase-local-setup-proof-v1'))),{issuer:origin,audience:'studybase-local-setup'});assert.equal(payload.sub,String(OWNER_ID));assert.equal(payload.canWrite,true);assert.ok(!JSON.stringify(payload).includes(token));assert.deepEqual(s.calls.filter(c=>typeof c==='object').map(c=>c.path),['git/blobs']);});
+
+test('delete and restore require owner authentication, origin and session CSRF',async()=>{
+ const s=await setup(),csrf=(await(await s.request('/api/session')).json()).csrf;
+ s.publisher.deletePost=async body=>{s.calls.push({delete:body});return {posts:[],deleted:[]};};
+ s.publisher.restorePost=async body=>{s.calls.push({restore:body});return {posts:[],deleted:[]};};
+ for(const path of ['/api/delete-post','/api/restore-post']){
+  for(const options of [{cookie:''},{},{from:'https://evil.test',headers:{'X-Admin-CSRF':csrf}}])assert.ok([401,403].includes((await s.request(path,{body:{slug:'sample'},...options})).status));
+  assert.equal(s.calls.filter(c=>typeof c==='object').length,0);
+  const r=await s.request(path,{body:{slug:'sample'},headers:{'X-Admin-CSRF':csrf}});assert.equal(r.status,200);
+  s.calls.length=0;
+ }
+});
+test('extensionless writer login preserves the draft in the OAuth return address',async()=>{
+ const s=await setup(),r=await s.request('/write?draft=test-id',{cookie:''});assert.equal(r.status,200);assert.match(await r.text(),/returnTo=%2Fwrite%3Fdraft%3Dtest-id/);assert.equal(safeReturn('/write?draft=test-id'),'/write?draft=test-id');
+});

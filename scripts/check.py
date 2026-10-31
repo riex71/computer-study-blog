@@ -7,13 +7,15 @@ import re
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent.parent
+DELETED = {entry['post']['slug'] for entry in json.loads((ROOT/'content/deleted-posts.json').read_text(encoding='utf-8'))}
 BASE = 'https://riex71.github.io/computer-study-blog/'
 
 class Document(HTMLParser):
     def __init__(self):
-        super().__init__(); self.ids=set(); self.links=[]; self.duplicates=[]
+        super().__init__(); self.ids=set(); self.links=[]; self.duplicates=[]; self.deleted=False
     def handle_starttag(self, tag, attrs):
         a=dict(attrs)
+        if tag == 'body' and a.get('data-deleted-article') in DELETED:self.deleted=True
         if 'id' in a:
             if a['id'] in self.ids:self.duplicates.append(a['id'])
             self.ids.add(a['id'])
@@ -41,7 +43,7 @@ for file, d in documents.items():
         assert target.is_relative_to(ROOT.resolve()), f'Link leaves site root in {file.name}: {link}'
         assert target.exists(), f'Missing local link in {file.name}: {link}'
         fragment=unquote(urlsplit(link).fragment)
-        if fragment and target in documents:assert fragment in documents[target].ids,f'Missing anchor in {file.name}: {link}'
+        if fragment and target in documents and not documents[target].deleted:assert fragment in documents[target].ids,f'Missing anchor in {file.name}: {link}'
 
 for css in ROOT.rglob('*.css'):
     if any(part in css.parts for part in ['.git','_site','node_modules','admin']):continue

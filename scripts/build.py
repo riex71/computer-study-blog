@@ -25,6 +25,12 @@ subprocess.run([node, str(compiler)], cwd=ROOT, check=True)
 BASE = 'https://riex71.github.io/computer-study-blog'
 AUTHOR = '윤동현'
 POSTS = sorted(json.loads((ROOT / 'content/posts.json').read_text(encoding='utf-8')), key=lambda p: p['date'], reverse=True)
+DELETED = json.loads((ROOT / 'content/deleted-posts.json').read_text(encoding='utf-8'))
+assert isinstance(DELETED, list)
+active_slugs = {p['slug'] for p in POSTS}
+deleted_slugs = {entry['post']['slug'] for entry in DELETED}
+assert len(deleted_slugs) == len(DELETED) and not active_slugs & deleted_slugs
+assert all(re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', slug) for slug in deleted_slugs)
 VERSION = hashlib.sha256(b''.join((ROOT / p).read_bytes() for p in ['blog.css', 'reader.css', 'blog.js', 'article-math.js', 'article-labs.js', 'article-code.js', 'assets/vendor/prism.js', 'assets/vendor/katex/katex.min.js', 'assets/vendor/katex/katex.min.css'])).hexdigest()[:12]
 BOOKMARK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4z"/></svg>'
 class Plain(HTMLParser):
@@ -85,7 +91,7 @@ topics = list(dict.fromkeys(t for p in POSTS for t in p['topics']))
 topic_links = ''.join(f'<a href="archive.html?topic={attr(t)}">{escape(t)} <span>{sum(t in p["topics"] for p in POSTS):02}</span></a>' for t in topics)
 filters = '<button type="button" data-topic="" aria-pressed="true">전체</button>' + ''.join(f'<button type="button" data-topic="{attr(t)}" aria-pressed="false">{escape(t)}</button>' for t in topics)
 home = (ROOT / 'templates/home.html').read_text(encoding='utf-8')
-for key, value in {'HEAD': head('원리를 연결하는 AI 공부 기록', 'AI 공부 블로그. 논문의 구조와 수식, 실험 조건을 그림과 함께 차근차근 읽습니다.'), 'COUNT': str(len(POSTS)), 'HEADER': header(), 'FOOTER': footer(), 'DIALOGS': dialogs(), 'TOPIC_LINKS': topic_links, 'CARDS': '\n'.join(card(p, quiet=True) for p in POSTS[:6])}.items(): home = home.replace('{{'+key+'}}', value)
+for key, value in {'HEAD': head('원리를 연결하는 AI 공부 기록', 'AI 공부 블로그. 논문의 구조와 수식, 실험 조건을 그림과 함께 차근차근 읽습니다.'), 'COUNT': str(len(POSTS)), 'HEADER': header(), 'FOOTER': footer(), 'DIALOGS': dialogs(), 'TOPIC_LINKS': topic_links, 'CARDS': '\n'.join(card(p, quiet=True) for p in POSTS[:6]) or '<p class="quiet">아직 공개된 글이 없습니다.</p>'}.items(): home = home.replace('{{'+key+'}}', value)
 schema = {'@context':'https://schema.org','@type':'Blog','name':'Studybase','url':BASE+'/','inLanguage':'ko-KR','author':{'@type':'Person','name':AUTHOR},'blogPost':[{'@type':'BlogPosting','headline':p['title'],'url':BASE+'/posts/'+p['slug']+'.html','datePublished':p['date']} for p in POSTS]}
 home = home.replace('</head>', '<script type="application/ld+json">'+js(schema)+'</script></head>')
 assert '{{' not in home
@@ -97,6 +103,9 @@ def page(filename, title, description, content, page_type='archive'):
 archive = f'''<section class="page-intro"><h1>모든 글</h1><p>제목부터 본문까지, 궁금한 개념으로 찾아보세요.</p></section><section id="archive" class="archive archive-page"><div class="archive-controls" data-search-controls hidden><div class="search-row"><label class="blog-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><span class="sr-only">공개 글 제목, 태그, 본문 검색</span><input type="search" data-search placeholder="궁금한 개념을 찾아보세요" autocomplete="off" maxlength="200"><kbd>/</kbd></label><label class="sort-label"><span class="sr-only">글 정렬</span><select data-sort><option value="newest">최근 글부터</option><option value="oldest">처음 쓴 글부터</option><option value="title">제목순</option></select></label></div><div class="filter-row"><div class="topic-filters" aria-label="글 주제">{filters}</div><button class="saved-filter" type="button" data-saved-filter aria-pressed="false">{BOOKMARK}저장한 글</button></div></div><div class="archive-view-row"><span class="article-count" data-result-count>{len(POSTS)}편의 글</span></div><noscript><p class="quiet">모든 공개 글을 아래에서 읽을 수 있습니다. 검색과 읽기 목록은 JavaScript가 필요합니다.</p></noscript><div class="post-grid" data-post-grid>{''.join(card(p) for p in POSTS)}</div><div class="search-empty" data-search-empty hidden><p>아직 일치하는 기록이 없어요.</p><span>다른 검색어를 입력하거나 모든 글을 둘러보세요.</span><button class="text-button" data-reset-filters type="button">모든 글 보기 ↗</button></div><p class="sr-only" data-search-status role="status" aria-live="polite"></p></section>'''
 page('archive.html', '아카이브', '주제와 키워드로 찾는 AI 공부 기록', archive)
 series = '''<section class="page-intro"><h1>모델은 어떻게 기억할까</h1><p>같은 ‘기억’이라는 단어를 쓰지만, 저장하는 것과 꺼내 쓰는 방법은 다릅니다.<br>상태를 갱신하는 Mamba에서 주소로 조회하는 Engram으로 이어 읽습니다.</p></section><div class="series-layout"><aside><p class="eyebrow">읽기 전에</p><p>벡터와 행렬 곱, 신경망의 층 개념을 알고 있다면 시작할 수 있습니다. SSM을 처음 접한다면 첫 글의 상태 갱신식부터 천천히 읽어보세요.</p><a href="archive.html?topic=메모리">메모리 주제로 더 찾기 ↗</a></aside><div class="series-steps"><section><span class="path-number">01</span><h2>무엇을 기억하고 잊을까</h2><p>Mamba는 입력에 따라 상태 갱신 방식을 바꿉니다. 이전 토큰을 모두 보관하는 대신, 과거 정보를 상태에 압축하는 설계와 그 대가를 살펴봅니다.</p><p>읽은 뒤에는 상태 갱신식의 각 항을 설명하고, 고정 계수와 입력별 선택의 차이를 작은 Python 예제로 확인할 수 있습니다.</p><a class="text-link" href="posts/mamba-selective-ssm.html">Mamba 읽기 <span>↗</span></a></section><section><span class="path-number">02</span><h2>무엇을 계산하고 찾아올까</h2><p>Engram은 짧은 토큰 패턴으로 메모리 주소를 정하고, 조회한 벡터를 현재 문맥에 맞춰 결합합니다. 상태 갱신과는 다른 ‘기억’의 역할을 읽습니다.</p><p>해시 테이블과 N-gram을 처음 접해도 토큰 예제부터 따라갈 수 있습니다. 읽은 뒤에는 주소를 정하는 과정과 조회 결과의 반영량을 정하는 과정을 구분해 보세요.</p><a class="text-link" href="posts/engram-conditional-memory.html">Engram 읽기 <span>↗</span></a></section><section><span class="path-number">03</span><h2>두 글을 읽고 남길 질문</h2><ul><li>입력이 달라지면 저장된 값이 바뀌는가, 조회하는 주소가 바뀌는가?</li><li>긴 문맥을 처리하는 비용은 어디에서 발생하는가?</li><li>논문의 성능 비교에서 학습량과 추론 비용은 어떻게 통제됐는가?</li></ul><p>RAG의 외부 문서 검색, 대화 기록 저장, recurrent state도 구분해 보세요.</p><a class="text-link" href="posts/engram-conditional-memory.html#related">개념 비교로 돌아가기 <span>↗</span></a></section></div></div>'''
+# Do not recommend articles that have been moved to the trash.
+if not {'mamba-selective-ssm','engram-conditional-memory'} <= active_slugs:
+    series = '<section class="page-intro"><h1>이어 읽기</h1><p>현재 공개된 글을 둘러보세요.</p></section><div class="post-grid">' + ''.join(card(p) for p in POSTS) + '</div>'
 page('series.html', '이어 읽기 — 모델은 어떻게 기억할까', 'Mamba와 Engram을 연결하는 읽기 가이드', series, 'series')
 
 for post in POSTS:
@@ -120,6 +129,13 @@ for post in POSTS:
     assert '{{' not in article_page
     (ROOT / 'posts' / (post['slug'] + '.html')).write_text(article_page, encoding='utf-8')
 
+# Replace old generated pages as well; an old tracked HTML file must never leak its body.
+for slug in deleted_slugs:
+    gone_head = head('삭제된 글', '현재 공개되지 않은 글입니다.', 'posts/'+slug+'.html', noindex=True)
+    for old, new in [('href="feed.xml"','href="../feed.xml"'),('href="assets/','href="../assets/'),('href="blog.css','href="../blog.css'),('src="blog.js','src="../blog.js')]:
+        gone_head = gone_head.replace(old,new)
+    (ROOT / 'posts' / (slug+'.html')).write_text('<!doctype html><html lang="ko"><head>'+gone_head+'</head><body data-deleted-article="'+slug+'">'+header('../')+'<main class="site-main"><section class="page-intro"><h1>현재 공개되지 않은 글입니다.</h1><p>작성자가 이 글을 삭제했습니다.</p><a href="../archive.html">다른 글 둘러보기 ↗</a></section></main>'+footer('../')+dialogs()+'</body></html>',encoding='utf-8')
+
 index = [{'slug': p['slug'], 'title': p['title'], 'description': p['description'], 'date': p['date'], 'tags': p['tags'], 'text': text(contents[p['slug']]), 'search': ' '.join([p['title'], p['description'], *p['tags'], *p['topics'], text(contents[p['slug']])])} for p in POSTS]
 (ROOT / 'search-index.json').write_text(js(index), encoding='utf-8')
 rss = ET.Element('rss', version='2.0'); channel = ET.SubElement(rss, 'channel')
@@ -130,7 +146,8 @@ for p in POSTS:
 ET.indent(rss);ET.ElementTree(rss).write(ROOT/'feed.xml',encoding='utf-8',xml_declaration=True)
 ET.register_namespace('', 'http://www.sitemaps.org/schemas/sitemap/0.9')
 urlset=ET.Element('{http://www.sitemaps.org/schemas/sitemap/0.9}urlset')
-for location,date in [(BASE+'/',POSTS[0]['date']),(BASE+'/archive.html',POSTS[0]['date']),(BASE+'/series.html',POSTS[0]['date'])]+[(BASE+'/posts/'+p['slug']+'.html',p.get('updated',p['date'])) for p in POSTS]:
+latest_date = POSTS[0]['date'] if POSTS else datetime.now(timezone.utc).date().isoformat()
+for location,date in [(BASE+'/',latest_date),(BASE+'/archive.html',latest_date),(BASE+'/series.html',latest_date)]+[(BASE+'/posts/'+p['slug']+'.html',p.get('updated',p['date'])) for p in POSTS]:
     node=ET.SubElement(urlset,'url');ET.SubElement(node,'loc').text=location;ET.SubElement(node,'lastmod').text=date
 ET.indent(urlset);ET.ElementTree(urlset).write(ROOT/'sitemap.xml',encoding='utf-8',xml_declaration=True)
 (ROOT/'404.html').write_text(f'<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>페이지를 찾을 수 없어요 — Studybase</title><link rel="stylesheet" href="{BASE}/blog.css?v={VERSION}"></head><body><main class="site-main" style="padding-top:18vh"><p class="eyebrow">404 / PAGE NOT FOUND</p><h1>이 기록은 아직 없거나,<br>주소가 바뀌었어요.</h1><p class="quiet">아카이브에서 찾고 있던 글을 다시 찾아보세요.</p><a class="text-link" href="{BASE}/archive.html">아카이브로 돌아가기 ↗</a></main></body></html>',encoding='utf-8')

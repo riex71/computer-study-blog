@@ -2,6 +2,7 @@
 from pathlib import Path
 import hashlib
 import shutil
+import re
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -26,11 +27,17 @@ def build():
     shutil.copy2(HERE / 'private-admin.mjs', OUT / 'private-admin.mjs')
     shutil.copy2(HERE / 'migration.mjs', OUT / 'migration.mjs')
 
+    for name in ['manage-posts.mjs','manage-posts.css']:
+        shutil.copy2(HERE / name, OUT / name)
+
     writer = (ROOT / 'writer.mjs').read_text(encoding='utf-8')
-    writer = "import { SessionPublisher } from './private-admin.mjs';\nimport { connectMigration } from './migration.mjs';\n" + writer
+    writer = "import { createPostManager } from './manage-posts.mjs';\nimport { SessionPublisher } from './private-admin.mjs';\nimport { connectMigration } from './migration.mjs';\n" + writer
     writer = replace_once(writer, "'posts/'+draft.post.slug+'.html':'index.html'", "new URL('posts/'+draft.post.slug+'.html',LIVE).href:LIVE")
     writer = replace_once(writer, 'draft.images,draft.post.slug);', 'draft.images,draft.post.slug,LIVE);')
-    bootstrap = """async function connectPrivate() {
+    writer, count = re.subn(r'function populatePosts\(\)\{.*?\n\}\nasync function loadPost', 'function populatePosts(){postManager.render(posts); }\nasync function loadPost', writer, count=1, flags=re.S)
+    assert count == 1
+    bootstrap = """const postManager = createPostManager({publisher:()=>publisher,edit:slug=>{closeDialog('library-dialog');loadPost(slug);},isBusy:()=>busy,begin:async()=>{busy=true;const unlock=lockEditor();try{await save('공개 글 관리 전');if(storageFailed)throw Error('현재 원고를 먼저 내려받아 보관해 주세요.');return unlock;}catch(error){unlock();busy=false;throw error;}},end:()=>{busy=false;$('#post-slug').disabled=!!draft.original||!!draft.images.length;renderDrafts();},changed:(state,removed)=>{posts=state.posts;if(removed&&draft?.original?.post.slug===removed)fill(blank());}});
+async function connectPrivate() {
   const connected = await SessionPublisher.connect();
   publisher?.disconnect(); publisher = connected;
   $('#connection-state').textContent = publisher.login + ' · 로그인됨';
@@ -58,6 +65,7 @@ try {
     template = replace_once(template, '게시하려면 GitHub에 한 번 연결하세요.', '본인 계정으로 로그인했습니다.')
     template = replace_once(template, '토큰은 이 창에서만 사용하며 새로고침하면 지워집니다.', '게시 권한은 서버에서 확인합니다. 이 창에 GitHub 토큰을 입력하지 않아도 됩니다.')
     template = template.replace('<form id="connect-form">', '<form id="connect-form" hidden>').replace('<details id="token-help">', '<details id="token-help" hidden>')
+    template = template.replace('</head>', '<link rel="stylesheet" href="manage-posts.css"></head>')
     version = hashlib.sha256((writer + template + (HERE / 'private-admin.mjs').read_text()).encode()).hexdigest()[:12]
     (OUT / 'write.html').write_text(template.replace('{{EDITOR_VERSION}}', version), encoding='utf-8')
     print(f'Private editor prepared in admin/dist (version {version}). No remote service was changed.')

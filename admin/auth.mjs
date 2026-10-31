@@ -28,7 +28,7 @@ async function unseal(value,env,purpose) {
 export function safeReturn(value) {
   if(typeof value!=='string'||!value.startsWith('/')||value.startsWith('//')||value.includes('\\'))return '/write.html';
   const u=new URL(value,'https://return.invalid');
-  return ['/write.html','/setup/complete'].includes(u.pathname)?u.pathname+u.search:'/write.html';
+  return ['/write.html','/write','/setup/complete'].includes(u.pathname)?u.pathname+u.search:'/write.html';
 }
 function requireOrigin(request,env) {
   if(new URL(request.url).origin!==env.ADMIN_ORIGIN)throw new HttpError(403,'등록한 관리자 주소로 접속해 주세요.');

@@ -1,0 +1,20 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright'),assert=require('node:assert/strict');
+(async()=>{const browser=await chromium.launch({headless:true,...(process.platform==='win32'?{channel:'msedge'}:{})}),context=await browser.newContext({viewport:{width:1440,height:1000}}),p=await context.newPage(),base='http://127.0.0.1:8767/',checks=[],errors=[];const ok=(name,value)=>{assert(value,name);checks.push(name);console.log('PASS',name);};
+try{
+ await context.request.post(base+'__test/reset');await context.addCookies([{name:'test-owner',value:'yes',url:base}]);p.on('pageerror',e=>errors.push(e.message));
+ await p.goto(base+'write.html?edit=engram-conditional-memory');await p.waitForFunction(()=>!document.querySelector('#writer-boot-lock')?.disabled&&document.querySelector('#markdown-editor')?.value.length>100);
+ const source=await p.locator('#markdown-editor').inputValue(),title=await p.locator('#post-title').inputValue();
+ await p.locator('#markdown-editor').fill(source+'\n\n삭제 전 보관할 초안\n');await p.locator('#open-library').click();await p.waitForFunction(()=>!document.querySelector('#published-list + [role=status]')?.textContent);
+ await p.locator('[data-managed-post="engram-conditional-memory"] .post-remove').click();await p.locator('#delete-post-dialog').waitFor();
+ ok('Deletion requires exact title confirmation',await p.locator('#delete-post-dialog [data-confirm]').isDisabled());await p.locator('#delete-post-confirm').fill(title+' 오타');ok('Mistyped title cannot delete a post',await p.locator('#delete-post-dialog [data-confirm]').isDisabled());
+ await p.locator('#delete-post-dialog [data-cancel]').click();let state=await context.request.get(base+'__test/state').then(r=>r.json());ok('Cancel leaves GitHub content untouched',state.commits.length===0);
+ await p.locator('[data-managed-post="engram-conditional-memory"] .post-remove').click();await p.locator('#delete-post-confirm').fill(title);await p.locator('#delete-post-dialog [data-confirm]').click();await p.waitForFunction(()=>!document.querySelector('#delete-post-dialog').open);
+ state=await context.request.get(base+'__test/state').then(r=>r.json());ok('Delete removes only the selected public article',JSON.parse(state.files['content/posts.json']).length===1&&!JSON.parse(state.files['content/posts.json']).some(p=>p.slug==='engram-conditional-memory'));ok('Deleted article appears in the recoverable trash',await p.getByRole('button',{name:title+' 복원',exact:true}).count()===1);
+ ok('Browser draft remains in the library',await p.locator('#draft-list button').filter({hasText:title}).count()>0);
+ await p.locator('#library-dialog [data-close-dialog]').click();ok('Deleting the current article opens a fresh editable draft',await p.locator('#markdown-editor').inputValue()===''&&!await p.locator('#post-slug').isDisabled());
+ await p.locator('#open-library').click();await p.waitForFunction(()=>!document.querySelector('#published-list + [role=status]')?.textContent);p.once('dialog',d=>d.accept());await p.getByRole('button',{name:title+' 복원',exact:true}).click();await p.waitForFunction(()=>document.querySelectorAll('[data-managed-post]').length===2);
+ state=await context.request.get(base+'__test/state').then(r=>r.json());ok('Restore brings back metadata and empties trash',JSON.parse(state.files['content/posts.json']).length===2&&JSON.parse(state.files['content/deleted-posts.json']).length===0);
+ await p.locator('#library-dialog [data-close-dialog]').click();await p.locator('#open-library').click();await p.locator('#draft-list button').filter({hasText:title}).first().click();ok('The preserved draft includes unsaved changes from before deletion',(await p.locator('#markdown-editor').inputValue()).includes('삭제 전 보관할 초안'));
+ ok('No browser exceptions',errors.length===0);
+ console.log(JSON.stringify({checks:checks.length,realGitHubWrites:false}));
+}finally{await context.close();await browser.close();}})().catch(e=>{console.error(e.stack);process.exit(1);});
