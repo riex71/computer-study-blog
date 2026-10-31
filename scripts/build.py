@@ -13,7 +13,7 @@ import subprocess
 import shutil
 import xml.etree.ElementTree as ET
 from outline import table_of_contents
-from admin_entry import admin_entry, draft_migration
+from admin_entry import admin_entry, draft_migration, validated_origin
 
 ROOT = Path(__file__).resolve().parent.parent
 node = os.environ.get('STUDYBASE_NODE') or shutil.which('node') or shutil.which('node.exe')
@@ -22,6 +22,8 @@ compiler = ROOT / 'scripts/markdown.cjs'
 if str(node).endswith('.exe') and str(compiler).startswith('/mnt/'):
     compiler = subprocess.check_output(['wslpath', '-w', str(compiler)], text=True).strip()
 subprocess.run([node, str(compiler)], cwd=ROOT, check=True)
+admin_url = os.environ.get('BLOG_ADMIN_URL', '').strip()
+admin_origin = validated_origin(admin_url) if admin_url else ''
 BASE = 'https://riex71.github.io/computer-study-blog'
 AUTHOR = '윤동현'
 POSTS = sorted(json.loads((ROOT / 'content/posts.json').read_text(encoding='utf-8')), key=lambda p: p['date'], reverse=True)
@@ -124,7 +126,7 @@ for post in POSTS:
     if post.get('updated'):
         revision = f'<p class="article-revision">수정 <time datetime="{attr(post["updated"])}">{escape(post["updated"].replace("-","."))}</time>' + (' · '+escape(post['revisionNote']) if post.get('revisionNote') else '') + '</p>'
     article_page=(ROOT/'templates/article.html').read_text(encoding='utf-8')
-    values={'HEAD':article_head+extra_css+f'<link rel="stylesheet" href="../reader.css?v={VERSION}"><script type="application/ld+json">{js(schema)}</script>','BODY_CLASS':'engram-article-page' if post['slug'].startswith('engram') else '', 'HEADER':header('../'),'FOOTER':footer('../'),'DIALOGS':dialogs(),'TITLE':escape(post['title']),'DECK':escape(post.get('deck',post['description'])),'REVISION':revision,'DATE':attr(post['date']),'DISPLAY_DATE':post['date'].replace('-','.'),'MINUTES':str(post['minutes']),'SLUG':post['slug'],'TOC':toc,'TOC_COUNT':str(section_count).zfill(2),'TOC_HIDDEN':'' if section_count else ' hidden','SAVE':save_button(post['slug'],True),'BODY':body,'RELATED':related}
+    values={'HEAD':article_head+extra_css+f'<link rel="stylesheet" href="../reader.css?v={VERSION}"><script type="application/ld+json">{js(schema)}</script>','BODY_CLASS':'engram-article-page' if post['slug'].startswith('engram') else '', 'HEADER':header('../'),'FOOTER':footer('../'),'DIALOGS':dialogs(),'TITLE':escape(post['title']),'DECK':escape(post.get('deck',post['description'])),'REVISION':revision,'DATE':attr(post['date']),'DISPLAY_DATE':post['date'].replace('-','.'),'MINUTES':str(post['minutes']),'SLUG':post['slug'],'EDIT_URL':attr((admin_origin+'/write' if admin_origin else '../write.html')+'?edit='+post['slug']),'TOC':toc,'TOC_COUNT':str(section_count).zfill(2),'TOC_HIDDEN':'' if section_count else ' hidden','SAVE':save_button(post['slug'],True),'BODY':body,'RELATED':related}
     for key,value in values.items():article_page=article_page.replace('{{'+key+'}}',value)
     assert '{{' not in article_page
     (ROOT / 'posts' / (post['slug'] + '.html')).write_text(article_page, encoding='utf-8')
@@ -155,7 +157,6 @@ if os.environ.get('GITHUB_SHA'):
     (ROOT/'build.json').write_text(json.dumps({'commit':os.environ['GITHUB_SHA'],'builtAt':datetime.now(timezone.utc).isoformat()}),encoding='utf-8')
 editor_template = (ROOT/'templates/write.html').read_text(encoding='utf-8')
 editor_version = hashlib.sha256((editor_template + ''.join((ROOT/p).read_text(encoding='utf-8') for p in ['writer.mjs','writer.css','editor-content.js','article-math.js','publisher.mjs','draft-store.mjs','article-labs.js','article-code.js','editor-scroll.js','editor-source.js','assets/vendor/prism.js','reader.css','posts/engram.css','assets/vendor/THIRD_PARTY.md'])).encode()).hexdigest()[:12]
-admin_url = os.environ.get('BLOG_ADMIN_URL', '').strip()
 (ROOT/'write.html').write_text(admin_entry(admin_url) if admin_url else editor_template.replace('{{EDITOR_VERSION}}', editor_version),encoding='utf-8')
 if admin_url:
     (ROOT/'draft-migration.html').write_text(draft_migration(admin_url), encoding='utf-8')

@@ -3,9 +3,9 @@ from scripts.admin_entry import admin_entry, draft_migration
 
 
 class AdminEntryTests(unittest.TestCase):
-    def test_verified_host_has_only_a_link_and_no_public_editing_controls(self):
+    def test_verified_host_redirects_with_a_fallback_link_and_no_public_editor(self):
         html = admin_entry('https://studybase-admin.my-account.workers.dev')
-        self.assertIn('https://studybase-admin.my-account.workers.dev/write.html', html)
+        self.assertIn('https://studybase-admin.my-account.workers.dev/write', html)
         self.assertNotIn('<textarea', html)
         self.assertNotIn('writer.mjs', html)
         self.assertNotIn('github-token', html)
