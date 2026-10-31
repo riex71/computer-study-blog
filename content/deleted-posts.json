@@ -1,1 +1,37 @@
-[]
+[
+  {
+    "id": "2b2bac10-e21c-40b1-b8b9-dc553ec90043",
+    "post": {
+      "slug": "engram-conditional-memory",
+      "title": "AI도 암기와 사고를 나눠야 할까? DeepSeek Engram",
+      "shortTitle": "암기와 사고 사이, Engram",
+      "date": "2026-10-29",
+      "category": "논문 리뷰",
+      "topics": [
+        "모델 구조",
+        "메모리",
+        "시스템"
+      ],
+      "tags": [
+        "Engram",
+        "DeepSeek",
+        "MoE",
+        "Conditional Memory",
+        "N-gram"
+      ],
+      "description": "입력 토큰으로 주소를 정하는 메모리, 문맥에 따라 열리는 게이트. 원 논문의 그림 6점과 실험을 따라 계산과 저장의 역할 분담을 살펴봅니다.",
+      "deck": "입력 토큰으로 주소를 정하는 메모리, 문맥에 따라 열리는 게이트. 원 논문의 그림과 실험을 따라 Engram의 작동 방식을 읽어본다.",
+      "thumbnail": "assets/engram/engram_arch.svg",
+      "thumbnailAlt": "N-gram을 해시해 조회하고 문맥 게이트로 결합하는 Engram의 구조도",
+      "thumbnailCredit": "Cheng et al. · Figure 1 · CC BY 4.0",
+      "thumbnailSource": "https://arxiv.org/html/2601.07372v2#S1.F1",
+      "sourceHtml": "content/articles/engram-conditional-memory.html",
+      "sourceMarkdown": "content/articles/engram-conditional-memory.md",
+      "updated": "2026-10-30",
+      "socialImage": "assets/social/engram-conditional-memory.png",
+      "revisionNote": "조회 경로의 설명용 도식과 해시 충돌 실험을 보탰습니다."
+    },
+    "deletedAt": "2026-10-31T04:49:04.221Z",
+    "fingerprint": "e3adffb8b2b8f0d5e28d6f2902d4581fcb51051f5b20a1a5dc68b48bdf18dcad"
+  }
+]
