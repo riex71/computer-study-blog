@@ -31,10 +31,11 @@ def build():
     bootstrap = """async function connectPrivate() {
   const connected = await SessionPublisher.connect();
   publisher?.disconnect(); publisher = connected;
-  $('#connection-state').textContent = publisher.email + ' · 로그인됨';
+  $('#connection-state').textContent = publisher.login + ' · 로그인됨';
   $('#connect-form').hidden = true; $('#token-help').hidden = true;
 }
 addEventListener('pageshow', event => { if(event.persisted)connectPrivate().catch(error=>message(error.message)); });
+$('#private-logout').addEventListener('click',async()=>{if(busy)return;try{await save();if(storageFailed)throw Error('임시 저장에 실패했습니다. 원고를 내려받은 뒤 로그아웃해 주세요.');await publisher.logout();location.assign('/write.html');}catch(error){message(error.message);}});
 try {
   await connectPrivate();
 } catch (error) {
@@ -47,7 +48,7 @@ try {
     (OUT / 'writer.mjs').write_text(writer, encoding='utf-8')
     template = (ROOT / 'templates/write.html').read_text(encoding='utf-8')
     template = replace_once(template, '<body data-page="writer">', '<body data-page="writer" data-private-admin="true">')
-    template = replace_once(template, '<span id="draft-status"', '<a class="writer-back" href="/cdn-cgi/access/logout">로그아웃</a><span id="draft-status"')
+    template = replace_once(template, '<span id="draft-status"', '<button type="button" id="private-logout" class="writer-back">로그아웃</button><span id="draft-status"')
     template = replace_once(template, '블로그 연결 관리', '로그인 정보')
     template = replace_once(template, '<h2 id="connect-title">블로그 연결</h2>', '<h2 id="connect-title">로그인 정보</h2>')
     template = replace_once(template, '게시하려면 GitHub에 한 번 연결하세요.', '본인 계정으로 로그인했습니다.')

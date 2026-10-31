@@ -1,14 +1,19 @@
 export class SessionPublisher {
   #csrf;
-  constructor(csrf, email) { this.#csrf = csrf; this.email = email; }
+  constructor(csrf, login) { this.#csrf = csrf; this.login = login; }
   static async connect() {
     const response = await fetch('/api/session', { cache: 'no-store', credentials: 'same-origin', signal: AbortSignal.timeout(20000) }).catch(() => { throw Error('로그인을 확인하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.'); });
     const session = await response.json().catch(() => ({ error:'로그인을 다시 확인해 주세요. 원고를 보관한 뒤 새로고침해 주세요.' }));
     if (!session.csrf && response.ok) throw Error(session.error);
     if (!response.ok) throw Error(session.error || '로그인을 확인하지 못했습니다.');
-    return new SessionPublisher(session.csrf, session.email);
+    return new SessionPublisher(session.csrf, session.login);
   }
   disconnect() { this.#csrf = ''; }
+  async logout() {
+    const response=await fetch('/auth/logout',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Admin-CSRF':this.#csrf},body:'{}'});
+    if(!response.ok)throw Error('로그아웃을 완료하지 못했습니다. 원고를 보관한 뒤 다시 시도해 주세요.');
+    this.disconnect();
+  }
   async request(path, body) {
     const response = await fetch('/api/' + path, {
       method: body ? 'POST' : 'GET', cache: 'no-store', credentials: 'same-origin',

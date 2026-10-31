@@ -4,12 +4,13 @@ const base='http://127.0.0.1:8767/',out=process.env.BLOG_TEST_OUTPUT;
 try{
  const guest=await browser.newContext();
  await guest.request.post(base+'__test/reset');
- for(const resource of ['write.html','writer.mjs','api/session','content/posts.json'])ok('Anonymous visitors cannot read '+resource,(await guest.request.get(base+resource)).status()===401);
+ const entry=await guest.request.get(base+'write.html');ok('Anonymous visitors see a login page without editing controls',entry.status()===200&&(await entry.text()).includes('GitHub로 로그인'));
+ for(const resource of ['writer.mjs','api/session','content/posts.json'])ok('Anonymous visitors cannot read '+resource,(await guest.request.get(base+resource)).status()===401);
  await guest.close();
  const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true}),p=await context.newPage();await context.addCookies([{name:'test-owner',value:'yes',url:base}]);p.on('pageerror',e=>errors.push(e.message));const external=[];p.on('request',r=>{if(r.url().startsWith('https://api.github.com'))external.push(r.url());});
  await context.route('https://riex71.github.io/computer-study-blog/build.json*',r=>r.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify({commit:'b'.repeat(40)})}));
  await p.goto(base+'write.html?edit=engram-conditional-memory');await p.waitForFunction(()=>document.querySelector('#writer-boot-lock')?.disabled===false);await p.waitForFunction(()=>document.querySelector('#markdown-editor').value.length>100);
- ok('Authenticated editor automatically uses the server session',await p.locator('#connection-state').textContent().then(s=>s.includes('owner@example.test'))&&!await p.locator('#connect-form').isVisible());
+ ok('Authenticated editor automatically uses the server session',await p.locator('#connection-state').textContent().then(s=>s.includes('riex71'))&&!await p.locator('#connect-form').isVisible());
  ok('Existing public Markdown opens without asking for a browser GitHub token',await p.locator('#post-title').inputValue().then(s=>s.includes('Engram'))&&await p.locator('#github-token').inputValue()==='');
  const original=await p.locator('#markdown-editor').inputValue(),source=original+'\n\n#### 비공개 편집 검사 {#private-check}\n\n본문 $x_i$와 `code`를 확인합니다.\n';
  await p.locator('#markdown-editor').fill(source);await p.waitForFunction(()=>document.querySelector('#preview-body h4')?.textContent.includes('비공개'));
@@ -25,6 +26,6 @@ try{
  await p.locator('#close-review').click();await context.route('**/api/publish',r=>r.fulfill({status:401,contentType:'application/json',body:JSON.stringify({error:'로그인이 만료됐습니다. 다시 로그인해 주세요.'})}));await p.locator('#markdown-editor').fill(source+'\n만료 후에도 보존할 원고\n');await p.locator('#review-button').click();await p.locator('#publish-button').click();await p.waitForFunction(()=>document.querySelector('#publish-status').textContent.includes('만료'));
  ok('Expired authentication retains the current draft and reports failure',await p.locator('#markdown-editor').inputValue().then(s=>s.includes('만료 후에도 보존할 원고'))&&!await p.locator('#publish-button').isDisabled());
  await p.locator('#close-review').click();if(out){fs.mkdirSync(out,{recursive:true});await p.screenshot({path:path.join(out,'private-editor.png')});}
- ok('The private editor has a top-level logout link',await p.locator('a[href="/cdn-cgi/access/logout"]').count()===1);ok('No browser exceptions in the private editor',errors.length===0);
+ await p.locator('#private-logout').click();await p.waitForURL('**/write.html');await p.getByText('GitHub로 로그인',{exact:true}).waitFor();ok('Logout removes access while keeping the browser draft',await p.locator('#markdown-editor').count()===0);ok('No browser exceptions in the private editor',errors.length===0);
  await context.close();if(out)fs.writeFileSync(path.join(out,'private-admin-browser-verification.json'),JSON.stringify({checks,errors,isolated:true,realGitHubWrites:false},null,2));
 }finally{await browser.close();}})().catch(e=>{console.error(e.stack);process.exit(1)});
