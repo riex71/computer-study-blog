@@ -128,7 +128,7 @@
   const article = document.body.dataset.page === 'article' ? $('.public-article') : null;
   if (article) {
     let font = Number(storage.get('studybase.font', '0')) || 0;
-    const setFont = () => { article.style.setProperty('--reading-size', `${(innerWidth <= 600 ? 16 : 17) + font}px`); };
+    const setFont = () => { article.style.setProperty('--reading-size', `${(innerWidth <= 600 ? 15 : 16) + font}px`); };
     $$('[data-font]').forEach(b => b.addEventListener('click', () => { font = Math.max(-2, Math.min(4, font + Number(b.dataset.font))); setFont(); storage.set('studybase.font', String(font)); }));
     setFont(); addEventListener('resize', setFont);
     const zoom = document.createElement('dialog'); zoom.className = 'figure-dialog'; zoom.setAttribute('aria-label', '그림 크게 보기');

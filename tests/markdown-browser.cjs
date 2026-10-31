@@ -23,7 +23,7 @@ const base=process.argv[2]||'http://127.0.0.1:8766/',out=process.env.BLOG_TEST_O
   ok('Inline and block math render, including math inside a heading and table',await p.locator('.public-article .katex').count()===6&&await p.locator('.math-error').count()===0);
   ok('Code fences keep dollars and embedded fences literal',await p.locator('pre code').allTextContents().then(codes=>codes.some(code=>code.includes('formula = "$x_1$"'))&&codes.some(code=>code.includes('```python'))));
   ok('Known and unknown code languages remain readable',await p.locator('.code-language').allTextContents().then(labels=>labels.includes('Python')&&labels.includes('JavaScript')&&labels.includes('unknown-language')));
-  ok('A section after references keeps ordinary body styling',await p.locator('#appendix').evaluate(e=>!e.closest('.article-sources'))&&await p.locator('#appendix+p').evaluate(e=>getComputedStyle(e).fontSize==='17px'));
+  ok('A section after references keeps ordinary body styling',await p.locator('#appendix').evaluate(e=>!e.closest('.article-sources'))&&await p.locator('#appendix+p').evaluate(e=>getComputedStyle(e).fontSize==='16px'));
   await p.locator('details:not(.reader-popover) summary').click();ok('Disclosure sections, subscripts and superscripts remain functional',await p.locator('.public-article details').evaluate(e=>e.open)&&await p.locator('.public-article sub').count()===1&&await p.locator('.public-article sup').count()===1);
   await p.locator('a[href="#%ED%95%9C%EA%B8%80-%EC%A3%BC%EC%86%8C"]').first().click();ok('Percent-encoded Korean links reach their original anchor',await p.locator('#한글-주소').evaluate(e=>e.getBoundingClientRect().top>=75&&e.getBoundingClientRect().top<180));
   for(const width of [360,390,768,900,1440,1920]){
