@@ -116,8 +116,8 @@
     const assets=node=>[...node.querySelectorAll('img')].map(img=>[img.getAttribute('src'),img.getAttribute('alt')]);
     return plain(a)===plain(b)&&JSON.stringify(assets(a))===JSON.stringify(assets(b))&&a.querySelectorAll('table').length===b.querySelectorAll('table').length?next:markdown;
   }
-  function preview(html,images=[],postSlug=''){
-    const articleURL=new URL('posts/'+(postSlug?postSlug+'.html':''),location.href);
+  function preview(html,images=[],postSlug='',baseURL=location.href){
+    const articleURL=new URL('posts/'+(postSlug?postSlug+'.html':''),baseURL);
     const root=document.createElement('div');root.innerHTML=html;root.querySelectorAll('[id]').forEach(el=>{el.dataset.previewAnchor=el.id;el.removeAttribute('id');});
     root.querySelectorAll('img').forEach(img=>{const src=img.getAttribute('src')||'',local=src.replace(/^\.\.\//,'');const staged=images.find(i=>i.path===local);if(src)img.src=staged?'data:'+staged.type+';base64,'+staged.base64:new URL(src,articleURL).href;});
     root.querySelectorAll('a').forEach(a=>{const href=a.getAttribute('href');if(href?.startsWith('#'))return;if(href)a.href=new URL(href,articleURL).href;a.target='_blank';a.rel='noopener noreferrer';});return root.innerHTML;

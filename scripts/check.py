@@ -23,7 +23,7 @@ class Document(HTMLParser):
 
 documents={}
 for file in ROOT.rglob('*.html'):
-    if any(part in file.parts for part in ['.git', 'templates', 'content', '_site', 'node_modules']):continue
+    if any(part in file.parts for part in ['.git', 'templates', 'content', '_site', 'node_modules', 'admin']):continue
     d=Document();d.feed(file.read_text(encoding='utf-8'));documents[file.resolve()]=d
     assert not d.duplicates, f'Duplicate IDs in {file}: {d.duplicates}'
 
@@ -44,7 +44,7 @@ for file, d in documents.items():
         if fragment and target in documents:assert fragment in documents[target].ids,f'Missing anchor in {file.name}: {link}'
 
 for css in ROOT.rglob('*.css'):
-    if any(part in css.parts for part in ['.git','_site','node_modules']):continue
+    if any(part in css.parts for part in ['.git','_site','node_modules','admin']):continue
     for match in re.finditer(r'url\(\s*[\"\']?([^\)\"\']+)[\"\']?\s*\)',css.read_text(encoding='utf-8')):
         url=urlsplit(match.group(1).strip())
         if url.scheme or url.netloc or not url.path:continue

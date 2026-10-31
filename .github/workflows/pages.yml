@@ -25,6 +25,8 @@ jobs:
       - run: npm ci --ignore-scripts
       - uses: actions/configure-pages@v5
       - name: Build, validate and package
+        env:
+          BLOG_ADMIN_URL: ${{ vars.BLOG_ADMIN_URL }}
         run: |
           python3 scripts/build.py
           python3 scripts/check.py

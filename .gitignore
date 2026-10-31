@@ -3,3 +3,7 @@ _site/
 build.json
 node_modules/
 __pycache__/
+admin/dist/
+admin/.bundle/
+admin/.wrangler/
+admin/.dev.vars*

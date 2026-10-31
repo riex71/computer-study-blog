@@ -1,0 +1,39 @@
+name: Validate private admin
+on:
+  pull_request:
+    paths:
+      - 'admin/**'
+      - 'publisher.mjs'
+      - 'writer.mjs'
+      - 'templates/write.html'
+      - '.github/workflows/admin-check.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'admin/**'
+      - 'publisher.mjs'
+      - 'writer.mjs'
+      - 'templates/write.html'
+      - '.github/workflows/admin-check.yml'
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: python3 build.py
+      - run: npm test
+      - run: python3 -m unittest discover -s tests -p 'test_*.py'
+      - run: npm run check:bundle

@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "studybase-admin",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-31",
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {
+    "directory": "dist",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "vars": {
+    "GITHUB_CLIENT_ID": "Iv23lib4szKtOaisN68j",
+    "GITHUB_APP_ID": "5550978",
+    "ADMIN_ORIGIN": "https://studybase-admin.dmcydh1804.workers.dev"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "SESSIONS",
+      "id": "9b2db856a5e84ffdb7c277bacad76d40"
+    }
+  ]
+}
