@@ -78,3 +78,6 @@ test('recovers an accepted commit when the update response is lost',async()=>{
 test('already-published image bytes are not uploaded again',async()=>{
  const api=server();try{await new GitHubPublisher('test-token').publish({post,markdown:'본문',images:[{path:'assets/uploads/sample-note/old.png',base64:'AQID',published:'old-commit'}]},'<p>본문</p>');const tree=api.calls.find(c=>c.path==='git/trees').body.tree;assert.deepEqual(tree.map(f=>f.path).sort(),['content/articles/sample-note.md','content/posts.json']);}finally{api.restore()}
 });
+
+
+test('editing a body preserves existing share-image and future metadata fields',async()=>{const remote={...post,socialImage:'assets/social/custom.png',ownerNote:'keep'},api=server({posts:[remote],files:{[post.sourceMarkdown]:'original'}});try{const result=await new GitHubPublisher('test-token').publish({post,markdown:'edited',images:[],original:{post:remote,markdown:'original'}},'<p>edited</p>');assert.equal(result.post.socialImage,remote.socialImage);assert.equal(result.post.ownerNote,'keep');}finally{api.restore()}});

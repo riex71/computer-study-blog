@@ -1,4 +1,6 @@
+import {normalizePost} from './post-schema.mjs';
 import {processImage,encodeImage} from './image-processing.mjs';
+export async function startWriter(adapter={}) {
 const { GitHubPublisher, LIVE } = await import('./publisher.mjs' + new URL(import.meta.url).search);
 const { DraftStore, draftVersion } = await import('./draft-store.mjs' + new URL(import.meta.url).search);
 const $ = s => document.querySelector(s);
@@ -40,7 +42,7 @@ function ensureSlug(force=false){
 function updateContext(){
   const editing=!!draft.original;$('#writer-context').textContent=editing?'공개 글 수정':'새 글';
   $('#review-button').textContent=editing?'수정 반영':'게시';$('#review-title').textContent=editing?'수정 내용 반영':'게시하기';$('#publish-button').textContent=editing?'반영하기':'게시하기';
-  $('#writer-return').href=editing?'posts/'+draft.post.slug+'.html':'index.html';$('#writer-return').textContent=editing?'← 글로 돌아가기':'← 블로그';
+  $('#writer-return').href=adapter.publicBase?new URL(editing?'posts/'+draft.post.slug+'.html':'index.html',adapter.publicBase).href:(editing?'posts/'+draft.post.slug+'.html':'index.html');$('#writer-return').textContent=editing?'← 글로 돌아가기':'← 블로그';
   $('#reload-published').hidden=!editing;$('#reload-published-note').hidden=!editing;document.title=(draft.post.title||'글쓰기')+' — Studybase';
 }
 function blank() {
@@ -49,8 +51,9 @@ function blank() {
 function collect() {
   if (!draft) return;
   const p = draft.post;
-  const oldTitle=p.title,oldDescription=p.description;
+  const oldTitle=p.title,oldDescription=p.description,oldThumbnail=p.thumbnail;
   for (const key of ['title','description','slug','date','category','thumbnail']) p[key] = $('#post-' + key).value.trim();
+  if(p.thumbnail!==oldThumbnail)p.socialImage=p.thumbnail;
   if(p.title!==oldTitle||!p.shortTitle)p.shortTitle=p.title;
   if(p.description!==oldDescription||!p.deck)p.deck=p.description;
   p.revisionNote=$('#post-revision-note').value.trim();
@@ -65,12 +68,11 @@ function renderPreview() {
   const previewPane=$('.preview-pane'),scroll=previewPane.scrollTop;
   $('#preview-title').textContent = draft.post.title || '제목 미리보기';
   $('#preview-description').textContent = draft.post.description;
-  $('#preview-body').innerHTML = EditorContent.preview(EditorContent.compile(draft.markdown, draft.original?.html), draft.images,draft.post.slug);
+  $('#preview-body').innerHTML = EditorContent.preview(EditorContent.compile(draft.markdown, draft.original?.html), draft.images,draft.post.slug,adapter.publicBase||location.href);
   $('#preview-body').querySelectorAll('table').forEach(table=>{
-    if(table.parentElement.matches('.engram-table-wrap,.table-scroll'))return;
+    if(table.parentElement.matches('.table-wrap,.table-scroll'))return;
     const wrapper=document.createElement('div');wrapper.className='table-scroll';wrapper.tabIndex=0;wrapper.setAttribute('role','region');wrapper.setAttribute('aria-label',(table.querySelector('caption')?.textContent.trim()||'본문 표')+', 가로 스크롤 가능');table.before(wrapper);wrapper.append(table);
   });
-  $('.preview-pane').classList.toggle('engram-article-page',draft.post.slug.startsWith('engram'));
   const math = StudyMath.render($('#preview-body'));
   window.StudyLabs?.mount($('#preview-body'));
   window.StudyCode?.mount($('#preview-body'));
@@ -173,6 +175,7 @@ async function publicFile(path) {
   const res = await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(20000)}); if (!res.ok) throw Error('공개 원고를 불러오지 못했습니다. 배포가 끝난 뒤 다시 시도해 주세요.'); return res.text();
 }
 function populatePosts(){
+  if(adapter.renderPosts){adapter.renderPosts(posts);return;}
   const list=$('#published-list');list.replaceChildren();
   for(const post of posts){const button=document.createElement('button');button.type='button';button.className='published-edit-button';button.dataset.editPost=post.slug;button.disabled=busy;const title=document.createElement('span'),label=document.createElement('span');title.textContent=post.title;label.textContent='수정';button.append(title,label);button.addEventListener('click',()=>{closeDialog('library-dialog');loadPost(post.slug)});list.append(button);}
   if(!posts.length){const text=document.createElement('p');text.className='help';text.textContent='공개 글을 불러오는 중입니다.';list.append(text);}
@@ -211,7 +214,7 @@ function validate() {
   if (!p.thumbnail) p.thumbnail = 'assets/social-cover.png';
   if (!asset.test(p.thumbnail) || p.thumbnail.includes('..')) throw Error('대표 이미지에는 assets/ 경로 또는 https 주소를 써주세요.');
   if (p.thumbnailSource && !/^https:\/\/[^\s<>"']+$/.test(p.thumbnailSource)) throw Error('이미지 출처 링크는 https 주소를 써주세요.');
-  p.category ||= '공부 기록';
+  p.category ||= '공부 기록';Object.assign(p,normalizePost(p));
   const html=EditorContent.compile(draft.markdown, draft.original?.html),probe=document.createElement('div');probe.innerHTML=html;
   if(!probe.textContent.trim()&&!probe.querySelector('img[src]'))throw Object.assign(Error('본문에 표시할 내용이 없습니다. 텍스트나 그림을 추가해 주세요.'),{field:'body'});
   if(StudyMath.render(probe).errors)throw Error('수식 문법을 확인해 주세요. 미리보기에서 오류가 있는 식을 고친 뒤 게시할 수 있습니다.');
@@ -350,7 +353,7 @@ $('#review-button').addEventListener('click', async () => {
   }catch(error){message(error.message);if(!$('#post-title').value.trim()){setMode('edit');$('#post-title').focus();}else if(error.field==='body'||!$('#markdown-editor').value.trim()) {setMode('edit');$('#markdown-editor').focus();}else if($('#math-status').textContent){setMode('preview');}else openDialog('settings-dialog');}
 });
 $('#close-review').addEventListener('click', () => { if (!busy) $('#review-dialog').close(); });
-$('#review-connect').addEventListener('click',()=>{returnToReview=true;openDialog('connect-dialog');$('#github-token').focus()});
+$('#review-connect').addEventListener('click',async()=>{if(adapter.reconnect){try{await adapter.reconnect(editorAPI);$('#review-button').click();}catch(error){message(error.message);}return;}returnToReview=true;openDialog('connect-dialog');$('#github-token').focus();});
 $('#review-dialog').addEventListener('cancel', e => { if (busy) e.preventDefault(); });
 function renderDeployment(text){
   const deployment=draft?.deployment,note=$('#deployment-note');note.hidden=!deployment;if(!deployment)return;
@@ -393,6 +396,7 @@ $('#publish-button').addEventListener('click', async () => {
     await save('게시 직전'); const submitted = structuredClone(draft);
     submitted.markdown=EditorContent.toMarkdown(html);
     html=EditorContent.compile(submitted.markdown);
+    if(adapter.beforePublish)await adapter.beforePublish(editorAPI);
     const result = await publisher.publish(submitted, html, text => $('#publish-status').textContent = text);
     accepted=true;for(const image of draft.images)image.published=result.sha;
     draft.post = result.post;draft.markdown=result.markdown;$('#markdown-editor').value=result.markdown; draft.original = {post:structuredClone(result.post),markdown:result.markdown,html:result.html};draft.deployment={sha:result.sha,url:result.url,status:'building'};updateContext();renderPreview();
@@ -403,6 +407,18 @@ $('#publish-button').addEventListener('click', async () => {
   finally {busy=false;controls.forEach((c,i)=>c.disabled=previous[i]);$('#post-slug').disabled=!!draft.original||!!draft.images.length;$('#publish-button').disabled=false;$('#close-review').disabled=false;renderDrafts();populatePosts();if(!accepted&&draft.deployment?.status==='building')watchDeployment({...draft.deployment,draftId:draft.id,post:draft.original?.post,html:draft.original?.html,markdown:draft.original?.markdown},0,deploymentEpoch);}
 });
 addEventListener('beforeunload', event => { if (busy || pending || unsaved.size) { event.preventDefault(); event.returnValue = ''; } });
+const editorAPI={
+ store:draftStore,isBusy:()=>busy,message,runtime:document.body.dataset.runtime,
+ getPublisher:()=>publisher,
+ setPublisher:next=>{publisher?.disconnect();publisher=next;},
+ save:async()=>{await save();if(storageFailed)throw Error('현재 원고를 먼저 내려받아 보관해 주세요.');},
+ edit:slug=>{closeDialog('library-dialog');return loadPost(slug);},
+ beginManagement:async()=>{busy=true;const unlock=lockEditor();try{await save('공개 글 관리 전');if(storageFailed)throw Error('현재 원고를 먼저 내려받아 보관해 주세요.');return unlock;}catch(error){unlock();busy=false;throw error;}},
+ endManagement:()=>{busy=false;$('#post-slug').disabled=!!draft.original||!!draft.images.length;renderDrafts();},
+ applyPostState:(state,removed)=>{posts=state.posts;if(removed&&draft?.original?.post.slug===removed)fill(blank());},
+ imported:async result=>{await refreshDrafts();message(result.imported+'개 원고의 사본을 가져왔습니다. 원본은 그대로 남아 있습니다.'+(result.skipped?' 이미 가져온 '+result.skipped+'개는 유지했습니다.':''));openDialog('library-dialog');}
+};
+if(adapter.initialize)await adapter.initialize(editorAPI);
 try {drafts=await draftStore.list();for(const item of drafts)versions.set(item.id,draftVersion(item));} catch { storageFailed = true; message('브라우저 저장소를 사용할 수 없습니다. 원고 내려받기로 보관해 주세요.'); }
 const selectedDraft=requestedNew||requestedEdit?null:requestedDraft?drafts.find(d=>d.id===requestedDraft):drafts.sort((a,b)=>b.savedAt.localeCompare(a.savedAt))[0];
 fill(selectedDraft||blank());
@@ -427,3 +443,5 @@ try {
 }catch(error){message(error.message);}finally{readyEditor();}
 
 addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='s'&&editorReady&&!busy){event.preventDefault();save();}});
+
+}

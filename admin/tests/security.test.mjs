@@ -51,3 +51,6 @@ test('delete and restore require owner authentication, origin and session CSRF',
 test('extensionless writer login preserves the draft in the OAuth return address',async()=>{
  const s=await setup(),r=await s.request('/write?draft=test-id',{cookie:''});assert.equal(r.status,200);assert.match(await r.text(),/returnTo=%2Fwrite%3Fdraft%3Dtest-id/);assert.equal(safeReturn('/write?draft=test-id'),'/write?draft=test-id');
 });
+
+
+test('publication keeps an explicit social image through API validation',async()=>{const s=await setup(),csrf=(await(await s.request('/api/session')).json()).csrf,body=publication();body.draft.post.socialImage='assets/social/test.png';const r=await s.request('/api/publish',{body,headers:{'X-Admin-CSRF':csrf}});assert.equal(r.status,200);assert.equal(s.calls.find(c=>typeof c==='object'&&c.post)?.post.socialImage,'assets/social/test.png');});

@@ -1,3 +1,4 @@
+import {publicationFields,PostValidationError} from '../src/js/post-schema.mjs';
 import { ManagedPublisher } from './post-management.mjs';
 import { LIVE } from '../src/js/publisher.mjs';
 import { configuration, verifyOwner, verifyMutation, csrfToken, HttpError, beginOAuth, finishOAuth, loginPage, logout, setupProof } from './auth.mjs';
@@ -37,20 +38,9 @@ async function bodyOf(request) {
 }
 export function validatePublication(body) {
   const draft = body?.draft, post = draft?.post;
-  if (!post || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(post.slug || '') || post.slug.length > 100 ||
-      typeof post.title !== 'string' || !post.title.trim() || post.title.length > 180 ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(post.date || '') || Number.isNaN(Date.parse(post.date)) ||
-      typeof draft.markdown !== 'string' || !draft.markdown.trim() || draft.markdown.length > 1000000 ||
-      typeof body.html !== 'string' || !body.html.trim() || body.html.length > 2000000)
-    throw new HttpError(400, '글 제목·주소·작성일·본문을 확인해 주세요.');
-  for (const name of ['topics', 'tags']) if (!Array.isArray(post[name]) || post[name].length > 20 || post[name].some(v => typeof v !== 'string' || v.length > 200))
-    throw new HttpError(400, '글의 주제와 태그를 확인해 주세요.');
-  const cleanPost = {};
-  for (const name of ['slug','title','description','date','category','deck','shortTitle','thumbnail','thumbnailAlt','thumbnailCredit','thumbnailSource','revisionNote']) {
-    if (post[name] !== undefined && (typeof post[name] !== 'string' || post[name].length > 2000)) throw new HttpError(400, '글 정보가 올바르지 않습니다.');
-    if (post[name] !== undefined) cleanPost[name] = post[name];
-  }
-  cleanPost.topics = post.topics; cleanPost.tags = post.tags;
+  let cleanPost;
+  try{cleanPost=publicationFields(post);}catch(error){if(error instanceof PostValidationError)throw new HttpError(400,error.message);throw error;}
+  if(typeof draft.markdown!=='string'||!draft.markdown.trim()||draft.markdown.length>1000000||typeof body.html!=='string'||!body.html.trim()||body.html.length>2000000)throw new HttpError(400,'글 본문을 확인해 주세요.');
   const images = draft.images || [];
   if (!Array.isArray(images) || images.length > 30) throw new HttpError(400, '첨부 그림 수를 확인해 주세요.');
   for (const image of images) {
