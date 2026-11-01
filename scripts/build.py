@@ -14,6 +14,7 @@ import shutil
 import xml.etree.ElementTree as ET
 from outline import table_of_contents
 from site_files import copy_runtime
+from release_contract import write_runtime
 from admin_entry import admin_entry, draft_migration, validated_origin
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -22,6 +23,7 @@ if OUT.exists():shutil.rmtree(OUT)
 OUT.mkdir()
 (OUT/'.nojekyll').touch()
 copy_runtime(OUT)
+RUNTIME=write_runtime(OUT)
 for name in ['assets','examples']:shutil.copytree(ROOT/name, OUT/name)
 (OUT/'posts').mkdir()
 (OUT/'content/articles').mkdir(parents=True)
@@ -37,7 +39,7 @@ admin_url = os.environ.get('BLOG_ADMIN_URL', '').strip()
 admin_origin = validated_origin(admin_url) if admin_url else ''
 BASE = 'https://riex71.github.io/computer-study-blog'
 AUTHOR = '윤동현'
-POSTS = sorted(json.loads((ROOT / 'content/posts.json').read_text(encoding='utf-8')), key=lambda p: p['date'], reverse=True)
+POSTS = sorted(json.loads((OUT / 'content/posts.json').read_text(encoding='utf-8')), key=lambda p: p['date'], reverse=True)
 DELETED = json.loads((ROOT / 'content/deleted-posts.json').read_text(encoding='utf-8'))
 assert isinstance(DELETED, list)
 active_slugs = {p['slug'] for p in POSTS}
@@ -59,6 +61,15 @@ class SourceGuard(HTMLParser):
             if key.lower() in {'href','src'}:
                 compact = re.sub(r'[\s\x00-\x1f]+', '', value or '').lower()
                 assert not compact.startswith(('javascript:', 'vbscript:', 'data:')), 'Unsafe article URL'
+class ContentFeatures(HTMLParser):
+    def __init__(self):
+        super().__init__();self.math=False;self.code=False;self.labs=False
+    def handle_starttag(self,tag,attrs):
+        classes=set(dict(attrs).get('class','').split())
+        self.math |= bool(classes & {'math-inline','math-display'})
+        self.code |= tag=='pre'
+        self.labs |= 'hash-demo' in classes
+
 def text(html):
     p = Plain(); p.feed(html)
     return ' '.join(' '.join(p.parts).split())
@@ -108,7 +119,7 @@ if len(topics) > len(home_topics):
     topic_links += '<a href="archive.html">모든 주제 ↗</a>'
 filters = '<button type="button" data-topic="" aria-pressed="true">전체</button>' + ''.join(f'<button type="button" data-topic="{attr(t)}" aria-pressed="false">{escape(t)}</button>' for t in topics)
 home = (ROOT / 'templates/home.html').read_text(encoding='utf-8')
-for key, value in {'HEAD': head('컴퓨터 과학 노트', '컴퓨터 과학의 개념과 구현을 공부하며 남기는 기록.'), 'COUNT': str(len(POSTS)), 'HEADER': header(), 'FOOTER': footer(), 'DIALOGS': dialogs(), 'TOPIC_NAV': '<nav class="home-topics" aria-label="주제별 글"><span>주제</span>'+topic_links+'</nav>' if topics else '', 'CARDS': '\n'.join(card(p, quiet=True) for p in POSTS[:6]) or '<p class="quiet">아직 공개된 글이 없습니다.</p>'}.items(): home = home.replace('{{'+key+'}}', value)
+for key, value in {'HEAD': head('컴퓨터 과학 노트', '컴퓨터 과학의 개념과 구현을 공부하며 남기는 기록.'), 'COUNT': str(min(len(POSTS),6)), 'HEADER': header(), 'FOOTER': footer(), 'DIALOGS': dialogs(), 'TOPIC_NAV': '<nav class="home-topics" aria-label="주제별 글"><span>주제</span>'+topic_links+'</nav>' if topics else '', 'CARDS': '\n'.join(card(p, quiet=True) for p in POSTS[:6]) or '<p class="quiet">아직 공개된 글이 없습니다.</p>'}.items(): home = home.replace('{{'+key+'}}', value)
 schema = {'@context':'https://schema.org','@type':'Blog','name':'Studybase','url':BASE+'/','inLanguage':'ko-KR','author':{'@type':'Person','name':AUTHOR},'blogPost':[{'@type':'BlogPosting','headline':p['title'],'url':BASE+'/posts/'+p['slug']+'.html','datePublished':p['date']} for p in POSTS]}
 home = home.replace('</head>', '<script type="application/ld+json">'+js(schema)+'</script></head>')
 assert '{{' not in home
@@ -128,11 +139,14 @@ for post in POSTS:
     others = sorted((p for p in POSTS if p['slug'] != post['slug']), key=lambda p: len(set(p['topics']) & set(post['topics'])), reverse=True)
     related = ''.join(f'<a class="related-story" href="{p["slug"]}.html"><span><small>{escape(" · ".join(t for t in p["topics"] if t in post["topics"]) or p["category"])} · {p["minutes"]}분 읽기</small><span class="related-title">{escape(p["title"])}</span><span class="related-description">{escape(p["description"])}</span></span><span aria-hidden="true">↗</span></a>' for p in others[:2])
     url = BASE + '/posts/' + post['slug'] + '.html'
-    schema = {'@context': 'https://schema.org', '@type': 'BlogPosting', 'headline': post['title'], 'description': post['description'], 'datePublished': post['date'], 'dateModified': post.get('updated', post['date']), 'author': {'@type': 'Person', 'name': AUTHOR, 'url': BASE+'/'}, 'mainEntityOfPage': url, 'image': BASE+'/'+post.get('socialImage','assets/social-cover.png'), 'inLanguage': 'ko-KR'}
+    schema = {'@context': 'https://schema.org', '@type': 'BlogPosting', 'headline': post['title'], 'description': post['description'], 'datePublished': post['date'], 'dateModified': post.get('updated', post['date']), 'author': {'@type': 'Person', 'name': AUTHOR, 'url': BASE+'/'}, 'mainEntityOfPage': url, 'image': post.get('socialImage','assets/social-cover.png') if post.get('socialImage','').startswith('https://') else BASE+'/'+post.get('socialImage','assets/social-cover.png'), 'inLanguage': 'ko-KR'}
     article_head = head(post['title'], post['description'], 'posts/'+post['slug']+'.html', image=post.get('socialImage','assets/social-cover.png'))
     article_head = article_head.replace('href="feed.xml"','href="../feed.xml"').replace('href="assets/', 'href="../assets/').replace('href="blog.css', 'href="../blog.css').replace('src="blog.js', 'src="../blog.js').replace('content="website"', 'content="article"')
-    article_head += f'<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css?v={VERSION}"><script src="../assets/vendor/katex/katex.min.js?v={VERSION}" defer></script><script src="../article-math.js?v={VERSION}" defer></script>'
-    article_head += f'<script src="../article-labs.js?v={VERSION}" defer></script><script src="../assets/vendor/prism.js?v={VERSION}" defer></script><script src="../article-code.js?v={VERSION}" defer></script>'
+    features=ContentFeatures();features.feed(body)
+    if features.math:
+        article_head += f'<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css?v={VERSION}"><script src="../assets/vendor/katex/katex.min.js?v={VERSION}" defer></script><script src="../article-math.js?v={VERSION}" defer></script>'
+    if features.labs:article_head += f'<script src="../article-labs.js?v={VERSION}" defer></script>'
+    if features.code:article_head += f'<script src="../assets/vendor/prism.js?v={VERSION}" defer></script><script src="../article-code.js?v={VERSION}" defer></script>'
     revision = ''
     if post.get('updated'):
         revision = f'<p class="article-revision">수정 <time datetime="{attr(post["updated"])}">{escape(post["updated"].replace("-","."))}</time>' + (' · '+escape(post['revisionNote']) if post.get('revisionNote') else '') + '</p>'
@@ -167,8 +181,8 @@ ET.indent(urlset);ET.ElementTree(urlset).write(OUT/'sitemap.xml',encoding='utf-8
 if os.environ.get('GITHUB_SHA'):
     (OUT/'build.json').write_text(json.dumps({'commit':os.environ['GITHUB_SHA'],'builtAt':datetime.now(timezone.utc).isoformat()}),encoding='utf-8')
 editor_template = (ROOT/'templates/write.html').read_text(encoding='utf-8')
-editor_version = hashlib.sha256((editor_template + ''.join((ROOT/p).read_text(encoding='utf-8') for p in ['src/js/writer.mjs','src/css/writer.css','src/js/editor-content.js','src/js/article-math.js','src/js/publisher.mjs','src/js/draft-store.mjs','src/js/article-labs.js','src/js/article-code.js','src/js/editor-scroll.js','src/js/editor-source.js','assets/vendor/prism.js','src/css/reader.css','assets/vendor/THIRD_PARTY.md'])).encode()).hexdigest()[:12]
-(OUT/'write.html').write_text(admin_entry(admin_url) if admin_url else editor_template.replace('{{EDITOR_VERSION}}', editor_version),encoding='utf-8')
+editor_version = RUNTIME[:12]
+(OUT/'write.html').write_text(admin_entry(admin_url) if admin_url else editor_template.replace('{{EDITOR_VERSION}}', editor_version).replace('{{RUNTIME_ID}}',RUNTIME),encoding='utf-8')
 if admin_url:
     (OUT/'draft-migration.html').write_text(draft_migration(admin_url), encoding='utf-8')
 elif (OUT/'draft-migration.html').exists() and 'data-draft-migration' in (OUT/'draft-migration.html').read_text(encoding='utf-8'):

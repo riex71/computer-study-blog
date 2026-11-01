@@ -41,7 +41,8 @@ class GenericSiteBuild(unittest.TestCase):
             for html in [first,second]:
                 for marker in ['id="principle"','<h4','math-inline','language-python','<table','class="hash-demo"','../assets/social-cover.png']:self.assertIn(marker,html)
                 self.assertNotIn('engram-article-page',html);self.assertNotIn('engram.css',html)
-            self.assertIn('class="toc-rail" hidden',(out/'posts/plain-note.html').read_text())
+            plain=(out/'posts/plain-note.html').read_text();self.assertIn('class="toc-rail" hidden',plain)
+            for library in ['katex.min.js','article-math.js','article-labs.js','prism.js','article-code.js']:self.assertNotIn(library,plain)
             home=(out/'index.html').read_text();self.assertEqual(home.count('class="post-card"'),6);self.assertIn('모든 주제',home)
             deleted.append({'id':'fixture-first','post':posts[0]});build(posts[1:])
             deleted[:]=[{'id':'fixture-'+str(i),'post':p} for i,p in enumerate(posts)];build([])

@@ -1,40 +1,61 @@
 name: Build and deploy blog
 on:
+  pull_request:
   push:
     branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
-  pages: write
-  id-token: write
 concurrency:
-  group: github-pages
+  group: blog-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 jobs:
-  deploy:
+  check:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      BLOG_ADMIN_URL: ${{ vars.BLOG_ADMIN_URL || 'https://studybase-admin.dmcydh1804.workers.dev' }}
+      WRANGLER_SEND_METRICS: 'false'
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            admin/package-lock.json
       - run: npm ci --ignore-scripts
-      - uses: actions/configure-pages@v5
-      - name: Build, validate and package
-        env:
-          BLOG_ADMIN_URL: ${{ vars.BLOG_ADMIN_URL }}
+      - run: npm ci --ignore-scripts --prefix admin
+      - name: Build and validate both artifacts
         run: |
           python3 scripts/build.py
           python3 scripts/check.py
-          node --test tests/*.test.*
+          python3 admin/build.py
+          python3 scripts/check_release.py
+      - name: Unit and integration checks
+        run: |
+          npm test
+          npm test --prefix admin
           python3 -m unittest discover -s tests -p 'test_*.py'
+          python3 -m unittest discover -s admin/tests -p 'test_*.py'
+          npm run check:bundle --prefix admin
+      - run: npx playwright install --with-deps chromium
+      - name: Isolated browser regression checks
+        run: node scripts/browser_checks.cjs
       - uses: actions/upload-pages-artifact@v4
+        if: github.event_name != 'pull_request'
         with:
           path: _site
-      - name: Deploy
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
         id: deployment
-        uses: actions/deploy-pages@v4

@@ -1,3 +1,4 @@
+import {imageContainer} from './image-container.mjs';
 /* Optimize before upload; every article uses the same explicit image policy. */
 const TYPES=['image/png','image/jpeg','image/webp'];
 export const MAX_IMAGE_BYTES=5*1024*1024;
@@ -6,14 +7,14 @@ export async function processImage(file,{mode='lossless',maxEdge=2400}={}) {
   const bytes=new Uint8Array(await file.arrayBuffer());
   const valid=file.type==='image/png'?bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71:file.type==='image/jpeg'?bytes[0]===255&&bytes[1]===216&&bytes[2]===255:String.fromCharCode(...bytes.slice(0,4))==='RIFF'&&String.fromCharCode(...bytes.slice(8,12))==='WEBP';
   if(!valid)throw Error('이미지 파일 형식을 확인해 주세요.');
-  const animated=file.type==='image/png'?new TextDecoder('latin1').decode(bytes).includes('acTL'):file.type==='image/webp'&&new TextDecoder('latin1').decode(bytes).includes('ANIM');
+  const {animated,bitDepth}=imageContainer(bytes,file.type);
   let bitmap;
   try{bitmap=await createImageBitmap(file);}catch{throw Error('손상되었거나 지원하지 않는 이미지입니다.');}
   try{
     const {width,height}=bitmap;
     if(!width||!height||width*height>40_000_000)throw Error('그림 해상도를 줄여 주세요. 최대 4천만 화소까지 처리합니다.');
     let blob=file,outWidth=width,outHeight=height;
-    const lossless=mode==='lossless'&&file.type==='image/png'&&bytes[24]!==16&&file.size>128*1024;
+    const lossless=mode==='lossless'&&file.type==='image/png'&&bitDepth!==16&&file.size>128*1024;
     if(!animated&&(lossless||mode==='webp')){
       const ratio=mode==='webp'?Math.min(1,maxEdge/Math.max(width,height)):1;
       const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(width*ratio));canvas.height=Math.max(1,Math.round(height*ratio));

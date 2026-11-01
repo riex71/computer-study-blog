@@ -78,6 +78,20 @@ python3 -m http.server 8765 --directory _site
 
 `BLOG_ADMIN_URL`을 생략하면 격리된 개발용 편집기를 빌드합니다. 운영에서는 저장소 Actions 변수로 관리 화면 주소를 설정합니다. `STUDYBASE_NODE`로 Node 실행 파일을 지정할 수 있습니다.
 
+글 정보 규칙은 `src/js/post-schema.mjs`를 편집기·게시 API·빌드에서 함께 사용합니다. 작성일, 글 주소, 원고 경로, 이미지 주소를 검사하고 본문만 수정할 때 기존 공유 이미지와 추가 메타데이터를 보존합니다. 공개 글은 실제 본문에 필요한 수식·코드·실험 스크립트만 불러옵니다.
+
+PR과 main에서 공개·관리 화면을 모두 빌드하고 단위 검사, 임시 콘텐츠 검사, 인증·편집·그림 첨부·삭제·복원의 브라우저 검사를 실행합니다. 검사를 통과한 main만 Pages로 배포합니다. 브라우저 검사를 직접 실행하려면 다음 명령을 사용합니다.
+
+```sh
+npm ci --ignore-scripts --prefix admin
+python3 admin/build.py
+python3 scripts/check_release.py
+npx playwright install chromium
+node scripts/browser_checks.cjs
+```
+
+공개·관리 빌드의 `runtime.json`에는 콘텐츠와 무관한 공통 기능의 버전을 기록합니다. 관리 화면은 게시 직전에 공개 버전을 확인하고 다르면 원고를 유지한 채 중단합니다. 글만 게시하는 경우에는 이 버전이 바뀌지 않습니다. 공개 버전 확인이 불가능한 네트워크 장애는 기존 인증·충돌 검사를 거쳐 처리합니다. Worker의 실제 배포는 별도 명령으로 진행하며 [관리 화면 문서](admin/README.md)에 순서를 적었습니다.
+
 원고 검사 외에 임시 복사본으로 서로 다른 글 15편, 제목 없는 글, 제목 계층·수식·표·그림·해시 실험, 홈 노출 제한, 전체 삭제·복원, 원본과 배포물 분리를 검사합니다. 관리자 브라우저 검사는 모의 GitHub와 새 브라우저 프로필만 사용하며 실제 글이나 초안을 변경하지 않습니다.
 
 원 논문 그림의 출처는 각 캡션과 `assets/engram/ATTRIBUTION.md`에 있습니다. 라이브러리 라이선스는 `assets/vendor/THIRD_PARTY.md`에 기록합니다.

@@ -8,7 +8,10 @@ import { environment,login,origin,token } from './helpers.mjs';
 import { OWNER_ID,OWNER_LOGIN,REPOSITORY_ID,REPOSITORY } from '../github.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..'),dist=path.join(root,'admin/dist'),publicRoot=path.join(root,'_site'),env=environment();
 let head='a'.repeat(40),counter=0,fixtureCookie='';const blobs=new Map(),files=new Map(),pending=[],commits=[];
-async function textFile(name){return files.has(name)?files.get(name):fs.readFile(path.join(root,name),'utf8');}
+const samplePost=slug=>({slug,title:slug==='sample-note'?'CS 편집 검사':'다른 공부 기록',date:'2026-11-01',description:'운영체제와 자료구조를 설명하는 테스트 원고입니다.',category:'공부 노트',topics:['시스템'],tags:['테스트'],sourceMarkdown:'content/articles/'+slug+'.md',sourceHtml:'content/articles/'+slug+'.html'});
+const sampleMarkdown='## 처음 절 {#intro}\n\n운영체제와 자료구조를 공부하며 남기는 충분히 긴 테스트 원고입니다. 이 내용은 실제 공개 글과 독립적인 모의 저장소에만 있습니다. 원고 보존과 편집, 게시 과정을 검증하기 위한 문장입니다.\n\n### 세부 설명\n\n수식 $x_i+1$과 `code`를 확인합니다.\n\n![테스트 그림](../assets/social-cover.png)\n\n## 다음 절 {#next}\n\n추가 설명입니다.\n';
+const fixtureFiles=new Map([['content/posts.json',JSON.stringify([samplePost('sample-note'),samplePost('another-note')])],['content/deleted-posts.json','[]'],['content/articles/sample-note.md',sampleMarkdown],['content/articles/another-note.md',sampleMarkdown]]);
+async function textFile(name){return files.has(name)?files.get(name):fixtureFiles.has(name)?fixtureFiles.get(name):fs.readFile(path.join(root,name),'utf8');}
 const fetchImpl=async(url,init={})=>{
  if(url==='https://github.com/login/oauth/access_token')return new Response(JSON.stringify({access_token:token,expires_in:28800}));
  const u=new URL(url);if(u.hostname!=='api.github.com')throw Error('Only mock GitHub is allowed');
@@ -30,7 +33,7 @@ const fetchImpl=async(url,init={})=>{
 };
 const handler=createHandler({fetchImpl});
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript','.mjs':'text/javascript','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.woff2':'font/woff2'};
-env.ASSETS={fetch:async request=>{const name=path.resolve(dist,'.'+new URL(request.url).pathname);if(!name.startsWith(dist+path.sep))return new Response('Not found',{status:404});try{let data=await fs.readFile(name);if(path.basename(name)==='writer.mjs')data=Buffer.from(data.toString('utf8').replace('publicURL:LIVE',"publicURL:'http://127.0.0.1:8769/'"));return new Response(request.method==='HEAD'?null:data,{headers:{'Content-Type':mime[path.extname(name)]||'application/octet-stream'}});}catch{return new Response('Not found',{status:404});}}};
+env.ASSETS={fetch:async request=>{const name=path.resolve(dist,'.'+new URL(request.url).pathname);if(!name.startsWith(dist+path.sep))return new Response('Not found',{status:404});try{let data=await fs.readFile(name);if(path.basename(name)==='private-editor.mjs')data=Buffer.from(data.toString('utf8').replace('publicURL:LIVE',"publicURL:'http://127.0.0.1:8769/'"));return new Response(request.method==='HEAD'?null:data,{headers:{'Content-Type':mime[path.extname(name)]||'application/octet-stream'}});}catch{return new Response('Not found',{status:404});}}};
 http.createServer(async(req,res)=>{try{
  const url=new URL(req.url,'http://127.0.0.1:8767');
  if(url.pathname==='/__test/reset'&&req.method==='POST'){head='a'.repeat(40);counter=0;blobs.clear();files.clear();pending.length=0;commits.length=0;env.SESSIONS.records.clear();fixtureCookie=(await login(env,fetchImpl)).cookie;res.writeHead(200).end('reset');return;}

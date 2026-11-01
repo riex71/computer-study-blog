@@ -33,6 +33,17 @@
 
 삭제한 글은 홈·검색·RSS·사이트맵과 Pages의 원문 파일에서 제외하며 기존 주소에는 noindex 안내를 표시합니다. 원고와 그림은 복원을 위해 GitHub 저장소에 남습니다. 브라우저 초안은 별도로 유지하며 임시 글의 ×는 해당 브라우저 사본만 삭제합니다. 공개 저장소의 Git 이력과 외부 캐시를 지우는 기능은 아닙니다.
 
+## 기능 변경 배포
+
+편집기의 공통 기능은 `src/js/writer.mjs`에서, 인증·휴지통·원고 이전 연결은 `private-editor.mjs`에서 관리합니다. `private-entry.mjs`가 명시적인 어댑터로 연결하므로 빌드 때 JavaScript 문자열을 치환하지 않습니다.
+
+1. 루트와 admin 의존성을 설치하고 `python3 scripts/build.py`, `python3 admin/build.py`, `python3 scripts/check_release.py`로 두 배포물의 공통 버전을 확인합니다.
+2. PR 검사를 통과한 변경을 main에 병합하고 Pages 배포 완료를 확인합니다.
+3. 루트에서 `python3 scripts/check_release.py --public-url https://riex71.github.io/computer-study-blog/`를 실행합니다. 배포된 공개 버전이 관리 화면과 다르면 Worker를 배포하지 않습니다.
+4. admin 폴더에서 기존 Wrangler 인증으로 `npx wrangler deploy`를 실행합니다. GitHub Actions에 Cloudflare 배포 토큰을 추가하지 않았으므로 Worker 배포는 자동 실행되지 않습니다.
+
+기존 편집기를 계속 열어 두었다면 새 버전 배포 후 새로고침합니다. 버전 불일치로 게시가 멈춰도 브라우저 원고는 보존합니다. 첫 버전 도입처럼 공개 `runtime.json`이 아직 없거나 네트워크로 확인할 수 없는 경우는 기존 게시 흐름을 유지합니다. 세션 만료·본문 충돌 검사는 이 확인과 별도로 항상 적용합니다.
+
 ## 검증
 
 ```
@@ -42,7 +53,7 @@ python3 build.py
 npm run check:bundle
 ```
 
-브라우저 검사는 별도 프로필과 로컬 모의 GitHub API만 사용합니다. `node tests/browser-server.mjs`로 격리된 서버를 띄우고 `node tests/browser.cjs`로 검사합니다. Playwright 경로는 `PLAYWRIGHT_MODULE`로 지정합니다. 실제 사용자의 초안과 공개 글은 바꾸지 않습니다. 테스트 인증 우회 옵션은 운영 Worker에 없습니다.
+브라우저 검사는 별도 프로필과 로컬 모의 GitHub API만 사용합니다. `node tests/browser-server.mjs`로 격리된 서버를 띄우고 `node tests/browser.cjs`로 검사합니다. 루트의 Playwright 개발 의존성을 기본으로 사용하며 `PLAYWRIGHT_MODULE`로 바꿀 수 있습니다. 전체 검사는 루트에서 `node scripts/browser_checks.cjs`로 실행합니다. 실제 사용자의 초안과 공개 글은 바꾸지 않습니다. 테스트 인증 우회 옵션은 운영 Worker에 없습니다.
 
 `dist/`, `.bundle/`, `.wrangler/`, `.dev.vars*`는 Git과 공개 Pages 배포에서 제외합니다. GitHub 앱 ID와 클라이언트 ID, KV 네임스페이스 ID는 비밀 값이 아닙니다.
 

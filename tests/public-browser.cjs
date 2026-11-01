@@ -1,0 +1,9 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright'),assert=require('node:assert/strict');
+const base=process.argv[2]||'http://127.0.0.1:8769/';
+(async()=>{const b=await chromium.launch({headless:true,...(process.platform==='win32'?{channel:'msedge'}:{})}),c=await b.newContext(),p=await c.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));let checks=0;const ok=(name,value)=>{assert(value,name);checks++;console.log('PASS',name);};try{
+ const posts=await c.request.get(base+'content/posts.json').then(r=>r.json());await p.goto(base);ok('Home lists the latest posts without assumptions about titles',await p.locator('.home-posts .post-card').count()===Math.min(posts.length,6));
+await p.locator('[data-open-search]').click();ok('Search opens from the keyboard-accessible header',await p.locator('[data-search-dialog]').isVisible());await p.keyboard.press('Escape');
+ for(const width of [390,1440]){await p.setViewportSize({width,height:900});for(const route of ['index.html','archive.html',...posts.slice(0,2).map(post=>'posts/'+post.slug+'.html')]){await p.goto(base+route);ok('Page fits '+width+' '+route,await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}}
+ for(const post of posts.slice(0,2)){await p.goto(base+'posts/'+post.slug+'.html');const info=await p.evaluate(()=>({math:!!document.querySelector('.math-inline,.math-display'),code:!!document.querySelector('pre code'),labs:!!document.querySelector('.hash-demo'),mathLoaded:!!window.katex,codeLoaded:!!window.Prism,labsLoaded:!!window.StudyLabs,rendered:!!document.querySelector('.katex')}));ok('Optional libraries match actual content: '+post.slug,info.math===info.mathLoaded&&info.code===info.codeLoaded&&info.labs===info.labsLoaded&&(!info.math||info.rendered));}
+ ok('No browser exceptions',errors.length===0);console.log(JSON.stringify({checks}));
+}finally{await c.close();await b.close();}})().catch(e=>{console.error(e.stack);process.exit(1)});

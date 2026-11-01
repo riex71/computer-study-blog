@@ -1,15 +1,16 @@
 /* One compiler for the browser editor and build. Only repository-owned scripts run. */
 const {JSDOM}=require('jsdom'),fs=require('node:fs'),path=require('node:path');
+const {validatePostList}=require('../src/js/post-schema.mjs');
 const root=path.resolve(__dirname,'..');
 function createCompiler(){
   const dom=new JSDOM('<!doctype html><body></body>',{url:'https://riex71.github.io/computer-study-blog/write.html',runScripts:'outside-only'});
   for(const file of ['assets/vendor/marked.js','assets/vendor/purify.js','assets/vendor/turndown.js','assets/vendor/katex/katex.min.js','src/js/article-math.js','src/js/editor-content.js'])dom.window.eval(fs.readFileSync(path.join(root,file),'utf8'));
   return {window:dom.window,compile:(md,reference='')=>dom.window.EditorContent.compile(md,reference),close:()=>dom.window.close()};
 }
-function compileArticles(contentRoot=root,outputRoot=path.join(contentRoot,'_site')){
+function compileArticles(contentRoot=root,outputRoot=path.join(contentRoot,'_site'),validated=null){
   const compiler=createCompiler();
   try{
-    const posts=JSON.parse(fs.readFileSync(path.join(contentRoot,'content/posts.json'),'utf8'));
+    const posts=validated||JSON.parse(fs.readFileSync(path.join(contentRoot,'content/posts.json'),'utf8'));
     for(const post of posts){
       const resolveSource=file=>{const result=path.resolve(contentRoot,file);if(!result.startsWith(path.join(contentRoot,'content/articles')+path.sep))throw Error('Article path leaves content/articles');return result;};
       const source=resolveSource(post.sourceMarkdown),output=path.resolve(outputRoot,post.sourceHtml),html=compiler.compile(fs.readFileSync(source,'utf8'));
@@ -24,4 +25,9 @@ function compileArticles(contentRoot=root,outputRoot=path.join(contentRoot,'_sit
   }finally{compiler.close();}
 }
 module.exports={createCompiler,compileArticles};
-if(require.main===module)console.log('Compiled '+compileArticles(root,path.join(root,'_site'))+' Markdown articles with the editor renderer.');
+if(require.main===module){
+ const posts=validatePostList(JSON.parse(fs.readFileSync(path.join(root,'content/posts.json'),'utf8')));
+ const deleted=JSON.parse(fs.readFileSync(path.join(root,'content/deleted-posts.json'),'utf8'));validatePostList(deleted.map(entry=>entry.post));
+ const output=path.join(root,'_site');fs.mkdirSync(path.join(output,'content'),{recursive:true});fs.writeFileSync(path.join(output,'content/posts.json'),JSON.stringify(posts,null,2)+'\n');
+ console.log('Compiled '+compileArticles(root,output,posts)+' Markdown articles with the shared schema.');
+}

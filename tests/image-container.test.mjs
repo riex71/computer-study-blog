@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {imageContainer} from '../src/js/image-container.mjs';
+const pngChunk=(name,data=Buffer.alloc(0))=>{const header=Buffer.alloc(8);header.writeUInt32BE(data.length);header.write(name,4);return Buffer.concat([header,data,Buffer.alloc(4)]);};
+const png=chunks=>{const ihdr=Buffer.alloc(13);ihdr.writeUInt32BE(1);ihdr.writeUInt32BE(1,4);ihdr[8]=8;ihdr[9]=6;return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),pngChunk('IHDR',ihdr),...chunks,pngChunk('IEND')]);};
+const webpChunk=(name,data)=>{const header=Buffer.alloc(8);header.write(name);header.writeUInt32LE(data.length,4);return Buffer.concat([header,data,data.length%2?Buffer.alloc(1):Buffer.alloc(0)]);};
+const webp=chunks=>{const body=Buffer.concat([Buffer.from('WEBP'),...chunks]),header=Buffer.alloc(8);header.write('RIFF');header.writeUInt32LE(body.length,4);return Buffer.concat([header,body]);};
+test('marker words in PNG metadata do not turn a static image into an animation',()=>{assert.equal(imageContainer(png([pngChunk('tEXt',Buffer.from('ANIM and acTL'))]),'image/png').animated,false);assert.equal(imageContainer(png([pngChunk('acTL',Buffer.alloc(8))]),'image/png').animated,true);});
+test('WebP chunk sizes and padding distinguish EXIF strings from animation chunks',()=>{assert.equal(imageContainer(webp([webpChunk('EXIF',Buffer.from('ANIM'))]),'image/webp').animated,false);assert.equal(imageContainer(webp([webpChunk('ANIM',Buffer.alloc(6))]),'image/webp').animated,true);});
+test('truncated containers and invalid chunk lengths are rejected',()=>{const a=png([]);assert.throws(()=>imageContainer(a.subarray(0,a.length-1),'image/png'));const b=webp([webpChunk('EXIF',Buffer.from('a'))]);b.writeUInt32LE(999,16);assert.throws(()=>imageContainer(b,'image/webp'));});

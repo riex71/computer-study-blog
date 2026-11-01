@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {normalizePost,publicationFields,validatePostList,shareImage} from '../src/js/post-schema.mjs';
+const base=()=>({slug:'os-note',title:'운영체제',date:'2026-11-01',topics:['시스템'],tags:[]});
+test('all production consumers share canonical defaults and source paths',()=>{const post=normalizePost(base());assert.equal(post.category,'공부 노트');assert.equal(post.description,'');assert.equal(post.sourceMarkdown,'content/articles/os-note.md');assert.equal(post.socialImage,'assets/social-cover.png');assert.deepEqual(validatePostList([post]),[post]);});
+test('optional metadata and custom share images survive a normal edit',()=>{const remote={...base(),socialImage:'assets/social/cover.png',customNote:'preserve me'},input=publicationFields({...base(),title:'수정한 제목'}),post=normalizePost({...remote,...input});assert.equal(post.socialImage,remote.socialImage);assert.equal(post.customNote,'preserve me');assert.equal(post.title,'수정한 제목');});
+test('representative image is the share fallback while SVG uses a supported default',()=>{assert.equal(shareImage({...base(),thumbnail:'assets/uploads/os-note/cover.webp'}),'assets/uploads/os-note/cover.webp');assert.equal(shareImage({...base(),thumbnail:'assets/diagram.svg'}),'assets/social-cover.png');});
+test('invalid calendar dates, unsafe image URLs, duplicate slugs and source escapes fail before storage',()=>{for(const patch of [{date:'2026-02-31'},{socialImage:'javascript:alert(1)'},{sourceMarkdown:'../secret.md'},{topics:'not-an-array'}])assert.throws(()=>normalizePost({...base(),...patch}));assert.throws(()=>validatePostList([base(),base()]));});
