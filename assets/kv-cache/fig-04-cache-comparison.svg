@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="897.936612pt" height="440.431344pt" viewBox="0 0 897.936612 440.431344" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-11-12T03:58:57.051475</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.8, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 440.431344
+L 897.936612 440.431344
+L 897.936612 0
+L 0 0
+z
+" style="fill: #f5f8fd"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 152.64 329.616
+L 807.84 329.616
+L 807.84 106.416
+L 152.64 106.416
+z
+" style="fill: #f5f8fd"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <path d="M 152.64 329.616
+L 152.64 106.416
+" clip-path="url(#pef6948e329)" style="fill: none; stroke: #54627a; stroke-opacity: 0.16; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_2"/>
+     <g id="text_1">
+      <text style="font-size: 14px; font-family: 'NanumGothic'; text-anchor: middle" x="152.64" y="352.144437" transform="rotate(-0 152.64 352.144437)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_3">
+      <path d="M 296.324211 329.616
+L 296.324211 106.416
+" clip-path="url(#pef6948e329)" style="fill: none; stroke: #54627a; stroke-opacity: 0.16; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_4"/>
+     <g id="text_2">
+      <text style="font-size: 14px; font-family: 'NanumGothic'; text-anchor: middle" x="296.324211" y="352.144437" transform="rotate(-0 296.324211 352.144437)">500</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_5">
+      <path d="M 440.008421 329.616
+L 440.008421 106.416
+" clip-path="url(#pef6948e329)" style="fill: none; stroke: #54627a; stroke-opacity: 0.16; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6"/>
+     <g id="text_3">
+      <text style="font-size: 14px; font-family: 'NanumGothic'; text-anchor: middle" x="440.008421" y="352.144437" transform="rotate(-0 440.008421 352.144437)">1000</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_7">
+      <path d="M 583.692632 329.616
+L 583.692632 106.416
+" clip-path="url(#pef6948e329)" style="fill: none; stroke: #54627a; stroke-opacity: 0.16; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8"/>
+     <g id="text_4">
+      <text style="font-size: 14px; font-family: 'NanumGothic'; text-anchor: middle" x="583.692632" y="352.144437" transform="rotate(-0 583.692632 352.144437)">1500</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_9">
+      <path d="M 727.376842 329.616
+L 727.376842 106.416
+" clip-path="url(#pef6948e329)" style="fill: none; stroke: #54627a; stroke-opacity: 0.16; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10"/>
+     <g id="text_5">
+      <text style="font-size: 14px; font-family: 'NanumGothic'; text-anchor: middle" x="727.376842" y="352.144437" transform="rotate(-0 727.376842 352.144437)">2000</text>
+     </g>
+    </g>
+    <g id="text_6">
+     <text style="font-size: 13px; font-family: 'NanumGothic'; text-anchor: middle; fill: #54627a" x="480.24" y="376.03975" transform="rotate(-0 480.24 376.03975)">KV Cache (MiB, 2^20 bytes)</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_11"/>
+     <g id="text_7">
+      <text style="font-size: 16px; font-family: 'NanumGothic'; text-anchor: end; fill: #14233d" x="140.64" y="139.014474" transform="rotate(-0 140.64 139.014474)">MHA · KV 32</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_12"/>
+     <g id="text_8">
+      <text style="font-size: 16px; font-family: 'NanumGothic'; text-anchor: end; fill: #14233d" x="140.64" y="195.692991" transform="rotate(-0 140.64 195.692991)">GQA · KV 8</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_13"/>
+     <g id="text_9">
+      <text style="font-size: 16px; font-family: 'NanumGothic'; text-anchor: end; fill: #14233d" x="140.64" y="252.371509" transform="rotate(-0 140.64 252.371509)">MLA · 512+64</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_14"/>
+     <g id="text_10">
+      <text style="font-size: 16px; font-family: 'NanumGothic'; text-anchor: end; fill: #14233d" x="140.64" y="309.050026" transform="rotate(-0 140.64 309.050026)">MQA · KV 1</text>
+     </g>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 152.64 116.561455
+L 741.170526 116.561455
+L 741.170526 149.434994
+L 152.64 149.434994
+z
+" clip-path="url(#pef6948e329)" style="fill: #2773cd"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 152.64 173.239972
+L 299.772632 173.239972
+L 299.772632 206.113511
+L 152.64 206.113511
+z
+" clip-path="url(#pef6948e329)" style="fill: #0d9488"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 152.64 229.918489
+L 194.021053 229.918489
+L 194.021053 262.792028
+L 152.64 262.792028
+z
+" clip-path="url(#pef6948e329)" style="fill: #7754c7"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 152.64 286.597006
+L 171.031579 286.597006
+L 171.031579 319.470545
+L 152.64 319.470545
+z
+" clip-path="url(#pef6948e329)" style="fill: #ea7e3d"/>
+   </g>
+   <g id="text_11">
+    <text style="font-weight: 700; font-size: 14px; font-family: 'NanumGothic'; text-anchor: start; fill: #2773cd" x="748.354737" y="136.910568" transform="rotate(-0 748.354737 136.910568)">2,048 MiB  ·  100%</text>
+   </g>
+   <g id="text_12">
+    <text style="font-weight: 700; font-size: 14px; font-family: 'NanumGothic'; text-anchor: start; fill: #0d9488" x="306.956842" y="193.589085" transform="rotate(-0 306.956842 193.589085)">512 MiB  ·  25%</text>
+   </g>
+   <g id="text_13">
+    <text style="font-weight: 700; font-size: 14px; font-family: 'NanumGothic'; text-anchor: start; fill: #7754c7" x="201.205263" y="250.267602" transform="rotate(-0 201.205263 250.267602)">144 MiB  ·  7.03%</text>
+   </g>
+   <g id="text_14">
+    <text style="font-weight: 700; font-size: 14px; font-family: 'NanumGothic'; text-anchor: start; fill: #ea7e3d" x="178.215789" y="306.946119" transform="rotate(-0 178.215789 306.946119)">64 MiB  ·  3.125%</text>
+   </g>
+  </g>
+  <g id="text_15">
+   <text style="font-weight: 700; font-size: 23px; font-family: 'NanumGothic'; text-anchor: start; fill: #14233d" x="21.6" y="39.169844" transform="rotate(-0 21.6 39.169844)">4K 문맥에서 KV Cache를 얼마나 줄일 수 있을까?</text>
+  </g>
+  <g id="text_16">
+   <text style="font-size: 13px; font-family: 'NanumGothic'; text-anchor: start; fill: #54627a" x="21.6" y="57.312" transform="rotate(-0 21.6 57.312)">32층 · Query head 32 · head 차원 128 · FP16 · 배치 1 · 모든 층에서 동일한 attention</text>
+  </g>
+  <g id="text_17">
+   <text style="font-size: 11px; font-family: 'NanumGothic'; text-anchor: start; fill: #54627a" x="21.6" y="416.664" transform="rotate(-0 21.6 416.664)">※ 계산 예제이지 GPU 측정값이 아님. MLA는 DeepSeek-V2의 KV 압축 차원(512)과 RoPE key(64)를 적용.</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pef6948e329">
+   <rect x="152.64" y="106.416" width="655.2" height="223.2"/>
+  </clipPath>
+ </defs>
+</svg>

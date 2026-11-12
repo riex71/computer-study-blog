@@ -1,5 +1,32 @@
 [
   {
+    "slug": "kv-cache-gqa-mla",
+    "title": "KV Cache는 왜 LLM의 병목이 될까? GQA와 MLA가 메모리를 줄이는 방법",
+    "shortTitle": "KV Cache, GQA, MLA",
+    "date": "2026-11-12",
+    "category": "논문 리뷰",
+    "topics": [
+      "모델 구조",
+      "메모리",
+      "시스템"
+    ],
+    "tags": [
+      "KV Cache",
+      "GQA",
+      "MLA",
+      "DeepSeek-V2",
+      "LLM Inference"
+    ],
+    "description": "Prefill과 Decode에서 시작해 MHA·GQA·MQA·MLA의 KV Cache 저장량을 수식과 그림, 계산 코드로 비교합니다.",
+    "deck": "재계산을 피하려고 만든 KV Cache가 왜 메모리 병목이 될까? Query 공유부터 latent 압축까지 구조를 따라가며 계산한다.",
+    "thumbnail": "assets/kv-cache/fig-02-mha-gqa-mqa.svg",
+    "thumbnailAlt": "MHA, GQA, MQA의 Query와 KV head 공유 관계를 비교한 자체 제작 도식",
+    "thumbnailCredit": "Studybase · 자체 제작 도식",
+    "thumbnailSource": "https://aclanthology.org/2023.emnlp-main.298/",
+    "sourceHtml": "content/articles/kv-cache-gqa-mla.html",
+    "sourceMarkdown": "content/articles/kv-cache-gqa-mla.md"
+  },
+  {
     "slug": "engram-conditional-memory",
     "title": "AI도 암기와 사고를 나눠야 할까? DeepSeek Engram",
     "shortTitle": "암기와 사고 사이, Engram",
